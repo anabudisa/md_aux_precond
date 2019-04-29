@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
-
 import numpy as np
 import scipy.sparse as sps
 
@@ -356,7 +353,7 @@ class Hcurl(object):
         for g, d in self.gb:
             if g.dim == 3:
                 ng = d["node_number"]
-                #Preallocation
+                # Pre-allocation
                 edges = np.ndarray((3*g.num_faces, 2))
                 orientations = np.ones(3*g.num_faces)
 

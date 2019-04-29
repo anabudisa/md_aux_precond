@@ -3,7 +3,9 @@ import scipy as sp
 import scipy.sparse as sps
 from scipy.io import savemat
 
+import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
 import porepy as pp
+
 from Hcurl import Hcurl, Projections
 
 # -------------------------------------
@@ -262,12 +264,11 @@ class SolverHazmath(object):
         self.M = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
         self.f = np.empty(shape=(blocks_no,), dtype=np.object)
 
+        # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
-                self.M[row, col] = self.signs[row] * \
-                    AA[self.block_dof_list[row], :].tocsc()[:,
-                    self.block_dof_list[col]].tocsr()
-            self.f[row] = self.signs[row] * bb[self.block_dof_list[row]]
+                self.M[row, col] = AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
+            self.f[row] = bb[self.block_dof_list[row]]
 
         # setup curl operator and P1-to-RT0 projection
         hcurl = Hcurl(self.gb)

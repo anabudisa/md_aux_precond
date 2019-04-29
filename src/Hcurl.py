@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 
+import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
 import porepy as pp
 
 # ---------------------------------------------------------------------------- #

@@ -3,9 +3,12 @@ import time
 import scipy.sparse as sps
 from tabulate import tabulate
 
+import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
 import porepy as pp
 
 from data import Data
+
+sys.path.insert(0, '../src/')
 from solver_hazmath import SolverHazmath
 
 
@@ -16,7 +19,7 @@ def visualize(x, variable, gb, assembler, discr, block_dof, full_dof,
     assembler.distribute_variable(gb, x, block_dof, full_dof)
 
     for g, d in gb:
-        d["pressure"] = discr.extract_pressure(g, d[variable])
+        d["pressure"] = discr.extract_pressure(g, d[variable], d)
 
     # save solution as vtk
     save = pp.Exporter(gb, file_name, folder=folder)
@@ -56,7 +59,7 @@ def main(file_name, mesh_size=0.0625, alpha=1.):
         "mesh_size": mesh_size,
         "aperture": 1.,
         "km": 1.,
-        "kf": 0.01,
+        "kf": 1.,
         "kn": 1.,
         "tol": 1e-8,
         "folder": "solution_rt0",
@@ -167,9 +170,9 @@ def test_alpha(name_):
 
 if __name__ == "__main__":
     # grid config file
-    # name = "no_fracture_2d"
+    name = "no_fracture_2d"
     # name = "two_fractures"
-    name = "one_fracture"
+    # name = "one_fracture"
     # name = "network_geiger"
     # name = "test_network"
 

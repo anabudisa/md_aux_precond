@@ -1,6 +1,8 @@
 import numpy as np
-import porepy as pp
 from tabulate import tabulate
+
+import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
+import porepy as pp
 
 
 class Data(object):
@@ -21,13 +23,17 @@ class Data(object):
 
     def create_gb(self, file_name):
         mesh_kwargs = {}
-        mesh_kwargs = {'mesh_size_frac': self.param["mesh_size"],
-                       'mesh_size_min': self.param["mesh_size"] / 2}
+        mesh_kwargs = {"mesh_size_frac": self.param["mesh_size"],
+                       "mesh_size_min": self.param["mesh_size"] / 2,
+                       "mesh_size_bound": self.param["mesh_size"],
+                       "mesh_size": self.param["mesh_size"]}
 
         self.domain = {'xmin': 0, 'xmax': 1, 'ymin': 0, 'ymax': 1}
 
-        self.gb = pp.importer.dfm_2d_from_csv(file_name, mesh_kwargs,
-                                             self.domain)
+        # network = pp.fracture_importer.network_2d_from_csv(file_name,
+        #                                                    domain=self.domain)
+        # self.gb = network.mesh(mesh_kwargs)
+        self.gb = pp.importer.dfm_2d_from_csv(file_name, mesh_kwargs, domain=self.domain)
 
         self.gb.compute_geometry()
         self.gb.assign_node_ordering()
@@ -75,18 +81,18 @@ class Data(object):
             else:
                 bound_face_centers = g.face_centers[:, bound_faces]
 
-                # right = bound_face_centers[0, :] > self.domain["xmax"] - \
-                #                                    self.tol
-                # left = bound_face_centers[0, :] < self.domain['xmin'] +
-                # self.tol
+                right = bound_face_centers[0, :] > self.domain["xmax"] - \
+                        self.tol
+                left = bound_face_centers[0, :] < self.domain['xmin'] + self.tol
 
-                labels = np.array(["dir"] * bound_faces.size)
-                # labels[right] = "dir"
-                bc_val[bound_faces] = bound_face_centers[0, :]
-                # bc_val[bound_faces[right]] = 1
+                labels = np.array(["neu"] * bound_faces.size)
+                labels[right] = "dir"
+                labels[left] = "dir"
+                bc_val[bound_faces[right]] = 1
+                bc_val[bound_faces[left]] = 0
                 # bc_val[bound_faces[left]] = -aperture * g.face_areas[
-                #     bound_faces[left]]
-
+                # bound_faces[left]]
+                # bc_val[bound_faces] = bound_face_centers[0, :]
                 param["bc"] = pp.BoundaryCondition(g, bound_faces, labels)
 
             param["bc_values"] = bc_val
