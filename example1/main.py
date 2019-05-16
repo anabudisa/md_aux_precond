@@ -131,10 +131,10 @@ def main(file_name, mesh_size=0.0625, alpha=1.):
 
 # run the solver for different mesh sizes and \alpha = 1
 def test_mesh_size(name_):
-
+    L = 600.
     table_h = []
-    for k in np.arange(1, 7):
-        mesh_size = 1./(2. ** k)
+    for k in np.arange(2, 7):
+        mesh_size = L/(2. ** k)
 
         it = main(name_, mesh_size=mesh_size)
 
@@ -170,16 +170,16 @@ def test_alpha(name_):
 
 if __name__ == "__main__":
     # grid config file
-    name = "no_fracture_2d"
+    # name = "no_fracture_2d"
     # name = "two_fractures"
     # name = "one_fracture"
     # name = "network_geiger"
-    # name = "test_network"
+    name = "network_sotra"
 
-    main(name)
+    # main(name)
 
-    # table_h = test_mesh_size(name)
-    # print(table_h)
+    table_h = test_mesh_size(name)
+    print(table_h)
 
     # table_alpha = test_alpha(name)
     # print(table_alpha)

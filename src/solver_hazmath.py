@@ -267,8 +267,8 @@ class SolverHazmath(object):
         # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
-                self.M[row, col] = AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
-            self.f[row] = bb[self.block_dof_list[row]]
+                self.M[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
+            self.f[row] = self.signs[row] * bb[self.block_dof_list[row]]
 
         # setup curl operator and P1-to-RT0 projection
         hcurl = Hcurl(self.gb)

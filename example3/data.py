@@ -32,8 +32,13 @@ class Data(object):
         # self.domain = {'xmin': 0, 'xmax': 1, 'ymin': 0, 'ymax': 1, 'zmin': 0,
         #                'zmax': 1}
 
-        self.gb, self.domain = pp.importer.dfm_3d_from_csv(file_name,
-                                                          mesh_kwargs)
+        # make fracture network
+        network_3d = pp.fracture_importer.network_3d_from_csv(file_name)
+
+        # Generate a mixed-dimensional mesh
+        gb = network_3d.mesh(mesh_kwargs)
+
+        pp.plot_grid(gb, alpha=0, info="all")
 
         self.gb.compute_geometry()
         self.gb.assign_node_ordering()
