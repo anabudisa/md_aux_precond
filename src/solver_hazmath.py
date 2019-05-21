@@ -1,20 +1,16 @@
 import numpy as np
 import scipy as sp
 import scipy.sparse as sps
-from scipy.io import savemat
+import time
+import ctypes
 
-import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
 import porepy as pp
 
-from Hcurl import Hcurl, Projections
-
-# -------------------------------------
-# import ctypes for HAZMATH -- Xiaozhe
-import ctypes
-from ctypes.util import find_library
+from Hcurl3D import Hcurl
+from logger import logger
 
 
-class SolverHazmath(object):
+class Solver(object):
 
     def __init__(self, gb, discr):
         # Grid bucket
@@ -35,15 +31,37 @@ class SolverHazmath(object):
         self.f = None
         # Curl operator
         self.Curl = None
-        # Projection operator Pi^1_h : P1 -> RT0
+        # Projection operator nodes to faces dof
         self.Pi_div_h = None
+        # Projection operator nodes to edges dof
+        self.Pi_curl_h = None
         # Sign fixing - cos for some reason mortar variable gives a negative
         # definite matrix
         self.signs = None
 
     # ------------------------------------------------------------------------ #
 
-    def solve(self, alpha=1., tol=1e-5, maxit=100):
+    def solve_direct(self, bmat=False):
+
+        logger.info("Solve the system with direct solver in Python")
+
+        # if M in bmat form
+        if bmat:
+            Mm = sps.bmat(self.M, format="csc")
+            ff = np.concatenate(tuple(self.f))
+
+        start_time = time.time()
+        upl = sps.linalg.spsolve(Mm, ff)
+        t = time.time() - start_time
+
+        logger.info("Elapsed time of direct solver: " + str(t))
+        logger.info("Done")
+
+        return upl
+
+    # ------------------------------------------------------------------------ #
+
+    def solve_hazmath(self, alpha=1., tol=1e-5, maxit=100):
         # solve the system using HAZMATH
         #          M x = f
 
@@ -194,6 +212,7 @@ class SolverHazmath(object):
     # ------------------------------------------------------------------------ #
 
     def P0_mass_matrix(self):
+        # TODO: deprecate for porepy mass matrix
         matrices = []
 
         # assemble matrix for each grid in GridBucket
@@ -230,7 +249,7 @@ class SolverHazmath(object):
             # if we're in a node (-> flux and pressure)
             if isinstance(g, pp.Grid):
                 # how many flux dofs for this grid
-                dim_u = self.gb.graph.nodes[g]['dof_u']
+                dim_u = self.gb.graph.nodes[g].num_faces
                 # assume we first order flux then pressure dofs
                 dof_u = np.append(dof_u, local_dof_g[:dim_u])
                 dof_p = np.append(dof_p, local_dof_g[dim_u:])
@@ -276,11 +295,14 @@ class SolverHazmath(object):
                 self.M[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
             self.f[row] = self.signs[row] * bb[self.block_dof_list[row]]
 
-        # setup curl operator and P1-to-RT0 projection
+        # set up curl operator and projection operators
         hcurl = Hcurl(self.gb)
-        projections = Projections(self.gb)
 
         self.Curl = hcurl.curl()
-        self.Pi_div_h = projections.Pi_div_h()
+        self.Pi_div_h = hcurl.Pi_div_h()
+
+        if self.gb.dim_max() > 2:
+            hcurl.compute_edges()
+            self.Pi_curl_h = hcurl.Pi_curl_h()
 
     # ------------------------------------------------------------------------ #

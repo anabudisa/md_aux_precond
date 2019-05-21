@@ -87,7 +87,7 @@ class Flow(object):
             # Boundaries
             b_faces = g.get_boundary_faces()
             if b_faces.size:
-                labels, bc_val = bc_flag(g, param, self.tol)
+                labels, bc_val = bc_flag(g, self.tol)
                 param["bc"] = pp.BoundaryCondition(g, b_faces, labels)
             else:
                 bc_val = np.zeros(g.num_faces)
@@ -130,6 +130,7 @@ class Flow(object):
                     e: (self.mortar, self.coupling),
                 }
             }
+        logger.info("Done")
 
     # ------------------------------------------------------------------------ #
 

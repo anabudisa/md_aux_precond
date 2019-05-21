@@ -27,16 +27,17 @@ def bc_flag(g, tol):
 
 def make_mesh(mesh_size, file_name, plot=False):
 
-    # mesh arguments
-    kwargs = {"mesh_size_frac": mesh_size,
-              "mesh_size_min": mesh_size,
-              "mesh_size_bound": mesh_size}
+    # define the domain
+    domain = {"xmin": 0, "xmax": 700, "ymin": 0, "ymax": 600}
 
     # Import fractures coordinates from file
-    network_3d = pp.fracture_importer.network_3d_from_csv(file_name)
+    network_2d = pp.fracture_importer.network_2d_from_csv(file_name,
+                                                          domain=domain)
 
     # Generate a mixed-dimensional mesh and geometry
-    gb = network_3d.mesh(kwargs)
+    gb = network_2d.mesh({"mesh_size_frac": mesh_size,
+                          "mesh_size_min": mesh_size,
+                          "mesh_size_bound": mesh_size})
 
     if plot:
         pp.plot_grid(gb, alpha=0, info="all")
