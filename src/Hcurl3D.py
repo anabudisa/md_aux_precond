@@ -1,13 +1,11 @@
 import numpy as np
 import scipy.sparse as sps
-import pdb
 
-import porepy as pp
 from porepy.utils import setmembership
 from porepy.utils import comp_geom as cg
 
 # ---------------------------------------------------------------------------- #
-# Class of P1 functions on 2D grids
+# Class of Hcurl functions on 3D grids
 
 
 class Hcurl(object):
@@ -34,13 +32,13 @@ class Hcurl(object):
         # Mapping to the right plane
         R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
 
-        # jump
+        # jump TODO: make sparse
         J = np.zeros(shape=(g_down.num_faces, g_up.num_nodes))
 
         # find which higher-dim faces and lower-dim faces (cells) relate to
         # each other
         cells, faces, data = sps.find(
-            mg.slave_to_mortar_int.T * mg.master_to_mortar_int)
+            mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
 
         for i in np.arange(np.size(data)):
             face = faces[i]
@@ -111,13 +109,13 @@ class Hcurl(object):
         nn_g_up = self.gb.graph.node[g_up]["node_number"]
         num_edges_up = self.num_edges[nn_g_up]
 
-        # jump
+        # jump TODO: make sparse
         J = np.zeros(shape=(g_down.num_faces, num_edges_up))
 
         # find which higher-dim faces and lower-dim faces (cells) relate to
         # each other
         cells, faces, data = sps.find(
-            mg.slave_to_mortar_int.T * mg.master_to_mortar_int)
+            mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
 
         for i in np.arange(np.size(data)):
             face = faces[i]
@@ -250,7 +248,7 @@ class Hcurl(object):
 
         # init
         for g in grids_23:
-            d = self.gb.graph.nodes[g]
+            d = self.gb.graph.node[g]
 
             # node number of this grid
             nn_g = d['node_number']
@@ -275,7 +273,7 @@ class Hcurl(object):
         # loop over all 2D and 3D grids
         for g in grids_23:
             # grid data
-            d = self.gb.graph.nodes[g]
+            d = self.gb.graph.node[g]
 
             # node number of this grid
             nn_g = d['node_number']
@@ -300,7 +298,7 @@ class Hcurl(object):
                     Signs = sps.diags(sign_h)
 
                     # face to mortar cell mapping
-                    P_mg = mg.master_to_mortar_int
+                    P_mg = mg.master_to_mortar_int()
                     nn_mg = d_e['edge_number'] + self.gb.num_graph_nodes()
 
                     # Extract mortar (1D) dofs and remove from interior (2D)
@@ -337,7 +335,7 @@ class Hcurl(object):
                             # Velocity degree of freedom matrix
                             Signs = sps.diags(sign_h)
 
-                            Pi_mg = mg_down.master_to_mortar_int
+                            Pi_mg = mg_down.master_to_mortar_int()
 
                             # Extract mortar (0D) dofs and remove from
                             # interior (1D)
@@ -402,45 +400,40 @@ class Hcurl(object):
         for g, d in self.gb:
             nn_g = d['node_number']
             if g.dim == 3:
-                Pi_gx = np.zeros(shape=(g.num_faces, g.num_nodes))
-                Pi_gy = np.zeros(shape=(g.num_faces, g.num_nodes))
-                Pi_gz = np.zeros(shape=(g.num_faces, g.num_nodes))
+                fn = g.face_nodes
+                Pi_gx = fn.copy()
+                Pi_gy = fn.copy()
+                Pi_gz = fn.copy()
 
                 for face in np.arange(g.num_faces):
-                    fn = g.face_nodes
-                    nodes = fn.indices[fn.indptr[face]:fn.indptr[face+1]]
+                    face_indices = np.arange(fn.indptr[face], fn.indptr[face+1])
                     face_normal = g.face_normals[:, face]
                     normal_norm = np.linalg.norm(face_normal)
                     face_area = g.face_areas[face]
 
-                    Pi_gx[face, nodes] = face_normal[0] * face_area \
-                                         / (3 * normal_norm)
-                    Pi_gy[face, nodes] = face_normal[1] * face_area \
-                                         / (3 * normal_norm)
-                    Pi_gz[face, nodes] = face_normal[2] * face_area \
-                                         / (3 * normal_norm)
+                    Pi_gx.data[face_indices] = face_normal[0] * face_area / (3 * normal_norm)
+                    Pi_gy.data[face_indices] = face_normal[1] * face_area / (3 * normal_norm)
+                    Pi_gz.data[face_indices] = face_normal[2] * face_area / (3 * normal_norm)
 
-                Pi_g = sps.csr_matrix(np.hstack((Pi_gx, Pi_gy, Pi_gz)))
+                Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             elif g.dim == 2:
                 R = cg.project_plane_matrix(g.nodes, check_planar=False)
+                fn = g.face_nodes
 
-                Pi_gx = np.zeros(shape=(g.num_faces, g.num_nodes))
-                Pi_gy = np.zeros(shape=(g.num_faces, g.num_nodes))
+                Pi_gx = fn.copy()
+                Pi_gy = fn.copy()
 
                 for face in np.arange(g.num_faces):
-                    fn = g.face_nodes
-                    nodes = fn.indices[fn.indptr[face]:fn.indptr[face + 1]]
+                    face_indices = np.arange(fn.indptr[face], fn.indptr[face+1])
                     face_normal = np.dot(R, g.face_normals[:, face])
                     normal_norm = np.linalg.norm(face_normal)
                     face_area = g.face_areas[face]
 
-                    Pi_gx[face, nodes] = face_normal[0] * face_area \
-                                         / (2 * normal_norm)
-                    Pi_gy[face, nodes] = face_normal[1] * face_area \
-                                         / (2 * normal_norm)
+                    Pi_gx.data[face_indices] = face_normal[0] * face_area / (2 * normal_norm)
+                    Pi_gy.data[face_indices] = face_normal[1] * face_area / (2 * normal_norm)
 
-                Pi_g = sps.csr_matrix(np.hstack((Pi_gx, Pi_gy)))
+                Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T])
             else:
                 normal_norm = np.linalg.norm(g.face_normals, axis=0)
                 Pi_g = sps.diags(normal_norm, format='csr')
@@ -454,7 +447,7 @@ class Hcurl(object):
                     # splitting of projection to interior and mortar part
 
                     # face to mortar cell mapping
-                    P_mg = mg.master_to_mortar_int
+                    P_mg = mg.master_to_mortar_int()
                     nn_mg = d_e['edge_number'] + self.gb.num_graph_nodes()
 
                     # Recover the orientation information
@@ -483,19 +476,20 @@ class Hcurl(object):
             num_edges = self.num_edges[nn_g]
             en = self.edge_nodes[nn_g]
             if g.dim == 3:
-                Pi_gx = np.zeros(shape=(num_edges, g.num_nodes))
-                Pi_gy = np.zeros(shape=(num_edges, g.num_nodes))
-                Pi_gz = np.zeros(shape=(num_edges, g.num_nodes))
+                Pi_gx = en.copy()
+                Pi_gy = en.copy()
+                Pi_gz = en.copy()
 
                 for edge in np.arange(num_edges):
-                    nodes = en.indices[en.indptr[edge]:en.indptr[edge + 1]]
+                    edge_indices = np.arange(en.indptr[edge], en.indptr[edge+1])
+                    nodes = en.indices[edge_indices]
                     edge_tangent = g.nodes[:, nodes[1]] - g.nodes[:, nodes[0]]
 
-                    Pi_gx[edge, nodes] = edge_tangent[0] / 2
-                    Pi_gy[edge, nodes] = edge_tangent[1] / 2
-                    Pi_gz[edge, nodes] = edge_tangent[2] / 2
+                    Pi_gx.data[edge_indices] = edge_tangent[0] / 2
+                    Pi_gy.data[edge_indices] = edge_tangent[1] / 2
+                    Pi_gz.data[edge_indices] = edge_tangent[2] / 2
 
-                Pi_g = sps.csr_matrix(np.hstack((Pi_gx, Pi_gy, Pi_gz)))
+                Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             else:
                 Pi_g = sps.identity(g.num_nodes, format='csr')

@@ -7,7 +7,7 @@ sys.path.insert(0, '../src/')
 from Hcurl3D import Hcurl
 
 
-def make_mesh(file_name, mesh_size, plot=True):
+def make_mesh(file_name, mesh_size, plot=False):
     mesh_kwargs = {'mesh_size_frac': mesh_size,
                    'mesh_size_min': mesh_size,
                    'mesh_size_bound': mesh_size}
@@ -46,12 +46,13 @@ def make_mesh(file_name, mesh_size, plot=True):
     hcurl.compute_edges()
     print(hcurl.num_edges)
 
-    Pi = hcurl.Pi_curl_h()
-    Pi = hcurl.Pi_curl_h()
+    Pi_curl = hcurl.Pi_curl_h()
+    Pi_div = hcurl.Pi_div_h()
+    curl = hcurl.curl()
 
     # Generate a curl-free function
     num_nodes = [g.num_nodes for g, d in gb]
-    func = np.zeros(Pi.shape[1])
+    func = np.zeros(Pi_div.shape[1])
     func[:3*num_nodes[0]] = 2.
 
     if plot:

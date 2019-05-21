@@ -4,6 +4,9 @@ import scipy.sparse as sps
 import sys; sys.path.insert(0, '/home/anci/Dropbox/porepy/src/')
 import porepy as pp
 
+# NOTE: This class is deprecated. Use Hcurl3D for both 2D and 3D
+# problems instead.
+
 # ---------------------------------------------------------------------------- #
 # Class of P1 functions on 2D grids
 

@@ -125,6 +125,12 @@ class SolverHazmath(object):
         ncol_Pidiv = ctypes.c_int(Pidiv_size[1])
         nnz_Pidiv = ctypes.c_int(self.Pi_div_h.nnz)
 
+        Picurl_size = self.Pi_curl_h.shape
+        nrowp1_Picurl = Picurl_size[0] + 1
+        nrow_Picurl = ctypes.c_int(Picurl_size[0])
+        ncol_Picurl = ctypes.c_int(Picurl_size[1])
+        nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
+
         Curl_size = self.Curl.shape
         nrowp1_Curl = Curl_size[0] + 1
         nrow_Curl = ctypes.c_int(Curl_size[0])
