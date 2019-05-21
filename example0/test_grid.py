@@ -1,5 +1,6 @@
 import porepy as pp
 import numpy as np
+import pdb
 import sys; sys.path.insert(0, '/home/anci/Dropbox/new_porepy/porepy/src/porepy/')
 sys.path.insert(0, '../src/')
 
@@ -45,6 +46,14 @@ def make_mesh(file_name, mesh_size, plot=True):
     hcurl.compute_edges()
     print(hcurl.num_edges)
 
+    Pi = hcurl.Pi_curl_h()
+    Pi = hcurl.Pi_curl_h()
+
+    # Generate a curl-free function
+    num_nodes = [g.num_nodes for g, d in gb]
+    func = np.zeros(Pi.shape[1])
+    func[:3*num_nodes[0]] = 2.
+
     if plot:
         pp.plot_grid(gb, alpha=0, info="c")
 
@@ -58,4 +67,4 @@ if __name__ == "__main__":
     # grid config file
     name = "network_3d.csv"
 
-    make_mesh(name, 1.2)
+    make_mesh(name, 1.2, False)
