@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sps
+import pdb
 
 import porepy as pp
 from porepy.utils import setmembership
