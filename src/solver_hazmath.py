@@ -246,7 +246,7 @@ class Solver(object):
             # if we're in a node (-> flux and pressure)
             if isinstance(g, pp.Grid):
                 # how many flux dof for this grid
-                dim_u = self.gb.graph.nodes[g].num_faces
+                dim_u = g.num_faces
                 # assume we first order flux then pressure dof
                 dof_u = np.append(dof_u, local_dof_g[:dim_u])
                 dof_p = np.append(dof_p, local_dof_g[dim_u:])

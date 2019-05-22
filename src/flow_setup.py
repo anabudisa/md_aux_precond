@@ -50,7 +50,7 @@ class Flow(object):
         self.gb.add_node_props(["param", "is_tangential"])
 
         for g, d in self.gb:
-            param = {}
+            parameters = {}
 
             unity = np.ones(g.num_cells)
             zeros = np.zeros(g.num_cells)
@@ -61,41 +61,40 @@ class Flow(object):
 
             # Tangential permeability (should work for both 2d and 3d domains)
             if g.dim == 3:
-                kxx = self.param["km"] * unity
+                kxx = param["km"] * unity
                 perm = pp.SecondOrderTensor(g.dim, kxx=kxx, kyy=kxx, kzz=kxx)
             elif (g.dim == 2) & (self.gb.dim_max() == 3):
-                kxx = self.param["kf_t"] * unity
+                kxx = param["kf_t"] * unity
                 perm = pp.SecondOrderTensor(g.dim, kxx=kxx, kyy=kxx, kzz=1)
             elif (g.dim == 2) & (self.gb.dim_max() == 2):
-                kxx = self.param["km"] * unity
+                kxx = param["km"] * unity
                 perm = pp.SecondOrderTensor(g.dim, kxx=kxx, kyy=kxx, kzz=1)
             else:
-                kxx = self.param["kf_t"] * unity
+                kxx = param["kf_t"] * unity
                 perm = pp.SecondOrderTensor(g.dim, kxx=kxx, kyy=1, kzz=1)
 
-            param["second_order_tensor"] = perm
+            parameters["second_order_tensor"] = perm
 
             # Aperture
-            aperture = np.power(self.param["aperture"], self.gb.dim_max() -
-                                g.dim)
-            param["aperture"] = aperture * unity
-            param["mass_weight"] = unity
+            aperture = np.power(param["aperture"], self.gb.dim_max() - g.dim)
+            parameters["aperture"] = aperture * unity
+            parameters["mass_weight"] = unity
 
             # Source term
-            param["source"] = zeros
+            parameters["source"] = zeros
 
             # Boundaries
             b_faces = g.get_boundary_faces()
             if b_faces.size:
                 labels, bc_val = bc_flag(g, self.tol)
-                param["bc"] = pp.BoundaryCondition(g, b_faces, labels)
+                parameters["bc"] = pp.BoundaryCondition(g, b_faces, labels)
             else:
                 bc_val = np.zeros(g.num_faces)
-                param["bc"] = pp.BoundaryCondition(g, empty, empty)
+                parameters["bc"] = pp.BoundaryCondition(g, empty, empty)
 
-            param["bc_values"] = bc_val
+            parameters["bc_values"] = bc_val
 
-            d[pp.PARAMETERS] = pp.Parameters(g, self.keyword, param)
+            d[pp.PARAMETERS] = pp.Parameters(g, self.keyword, parameters)
 
         # Normal permeability
         for e, d in self.gb.edges():
@@ -107,9 +106,9 @@ class Flow(object):
             aperture = self.gb.node_props(g_l, pp.PARAMETERS)[self.keyword]["aperture"]
             gamma = check_P * aperture
             kn = param["kf_n"] * np.ones(mg.num_cells) / gamma
-            param = {"normal_diffusivity": kn}
+            parameters = {"normal_diffusivity": kn}
 
-            d[pp.PARAMETERS] = pp.Parameters(e, self.keyword, param)
+            d[pp.PARAMETERS] = pp.Parameters(e, self.keyword, parameters)
 
         # Set now the discretization
         # set the discretization for the grids
@@ -147,7 +146,7 @@ class Flow(object):
         assembler = pp.Assembler()
 
         logger.info("Assemble the flow problem")
-        block_A, block_b, block_dof, full_dof = assembler.assemble_matrix_rhs(self.gb)
+        block_A, block_b, block_dof, full_dof = assembler.assemble_matrix_rhs(self.gb, add_matrices=False)
 
         # unpack the matrices just computed
         coupling_name = self.coupling_name + (
