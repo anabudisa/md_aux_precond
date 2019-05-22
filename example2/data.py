@@ -76,10 +76,10 @@ def solve_(file_name, mesh_size, alpha, param):
 
     # extract variables and export hazmath solution
     darcy_flow.extract_solution(x_haz, block_dof, full_dof)
-    darcy_flow.export_solution(x_haz, block_dof, full_dof)
+    darcy_flow.export_solution(folder, "sol_hazmath")
 
     # extract variables and export direct solution
     darcy_flow.extract_solution(x_dir, block_dof, full_dof)
-    darcy_flow.export_solution(x_dir, block_dof, full_dof)
+    darcy_flow.export_solution(folder, "sol_direct")
 
     return iters

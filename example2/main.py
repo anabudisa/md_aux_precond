@@ -82,5 +82,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    test_alpha()
-    test_mesh_size()
+    # test_alpha()
+    # test_mesh_size()

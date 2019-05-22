@@ -136,11 +136,12 @@ class Solver(object):
         ncol_Pidiv = ctypes.c_int(Pidiv_size[1])
         nnz_Pidiv = ctypes.c_int(self.Pi_div_h.nnz)
 
-        Picurl_size = self.Pi_curl_h.shape
-        nrowp1_Picurl = Picurl_size[0] + 1
-        nrow_Picurl = ctypes.c_int(Picurl_size[0])
-        ncol_Picurl = ctypes.c_int(Picurl_size[1])
-        nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
+        if self.gb.dim_max() > 2:
+            Picurl_size = self.Pi_curl_h.shape
+            nrowp1_Picurl = Picurl_size[0] + 1
+            nrow_Picurl = ctypes.c_int(Picurl_size[0])
+            ncol_Picurl = ctypes.c_int(Picurl_size[1])
+            nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
 
         Curl_size = self.Curl.shape
         nrowp1_Curl = Curl_size[0] + 1
@@ -309,7 +310,6 @@ class Solver(object):
         self.Pi_div_h = hcurl.Pi_div_h()
 
         if self.gb.dim_max() > 2:
-            hcurl.compute_edges()
             self.Pi_curl_h = hcurl.Pi_curl_h()
         logger.info("Done")
 
