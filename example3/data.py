@@ -1,11 +1,11 @@
 import numpy as np
-import scipy.sparse as sps
-import time
 import porepy as pp
 
 import sys; sys.path.insert(0, "../src/")
 
 from logger import logger
+from solver_hazmath import Solver
+from flow_setup import Flow
 
 
 def bc_flag(g, tol):
@@ -22,7 +22,7 @@ def bc_flag(g, tol):
 
     return labels, bc_val
 
-# ------------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------- #
 
 
 def make_mesh(mesh_size, file_name, plot=False):
@@ -43,23 +43,42 @@ def make_mesh(mesh_size, file_name, plot=False):
 
     return gb
 
-# ------------------------------------------------------------------------------#
+# ---------------------------------------------------------------------------- #
 
 
-def solve_direct(M, f, bmat=False):
+def solve_(file_name, mesh_size, alpha, param):
+    # create mixed-dimensional grids
+    gb = make_mesh(file_name, mesh_size)
 
-    logger.info("Solve system with direct solver in Python")
+    # set parameters and boundary conditions
+    folder = "solution"
+    darcy_flow = Flow(gb, folder)
+    darcy_flow.set_data(param, bc_flag)
 
-    # if M in bmat form
-    if bmat:
-        M = sps.bmat(M, format="csc")
-        f = np.concatenate(tuple(f))
+    # get matrix and rhs
+    A, M, b, block_dof, full_dof = darcy_flow.matrix_rhs()
 
-    start_time = time.time()
-    upl = sps.linalg.spsolve(M, f)
-    t = time.time() - start_time
+    # set up solver
+    solver = Solver(gb, darcy_flow.discr)
+    solver.setup_system(A, b, block_dof, full_dof)
 
-    logger.info("Elapsed time of direct solver: " + str(t))
-    logger.info("Done")
+    # solve with hazmath library solvers
+    x_haz, iters = solver.solve_hazmath(alpha)
+    logger.info("Hazmath iters: " + str(iters))
 
-    return upl
+    # solve with direct python solver
+    x_dir = solver.solve_direct()
+
+    # compute error
+    error = np.linalg.norm(x_dir - x_haz) / np.linalg.norm(x_dir)
+    logger.info("Error: " + str(error))
+
+    # extract variables and export hazmath solution
+    darcy_flow.extract_solution(x_haz, block_dof, full_dof)
+    darcy_flow.export_solution(x_haz, block_dof, full_dof)
+
+    # extract variables and export direct solution
+    darcy_flow.extract_solution(x_dir, block_dof, full_dof)
+    darcy_flow.export_solution(x_dir, block_dof, full_dof)
+
+    return iters

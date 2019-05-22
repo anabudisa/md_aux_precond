@@ -41,7 +41,7 @@ class Solver(object):
 
     # ------------------------------------------------------------------------ #
 
-    def solve_direct(self, bmat=False):
+    def solve_direct(self, bmat=True):
 
         logger.info("Solve the system with direct solver in Python")
 
@@ -57,7 +57,10 @@ class Solver(object):
         logger.info("Elapsed time of direct solver: " + str(t))
         logger.info("Done")
 
-        return upl
+        # permute solution
+        y = self.permute_solution(upl)
+
+        return y
 
     # ------------------------------------------------------------------------ #
 
@@ -67,15 +70,15 @@ class Solver(object):
 
         # !! NB !!
         # M[0, 0] represents product (u, v) where u,v \in H(div)
-        # for \alpha * (u, v) multiply M[0, 0] with alpha provided through
-        # function arguments;
+        # for \alpha * (u, v) multiply M[0, 0] with alpha
+        # e.g. M[0, 0].multiply(alpha)
         #
         # since M represents a stiffness matrix for the flow problem (Darcy +
         # m.c.), then
         # M[1, 0] represents (discrete) -div operator;
-        #
-        # use self.Curl and self.Pi_div_h to get the matrices for curl
-        # operator and projection to H_h(div), respectively;
+
+        logger.info("Solve the system with hazmath library using auxiliary "
+                    "space preconditioners")
 
         # right hand side
         ff = np.concatenate(tuple(self.f))
@@ -84,15 +87,8 @@ class Solver(object):
         Mp = self.P0_mass_matrix()
         Mp_diag = Mp.diagonal()
 
-        # output
-        #savemat('Curl', {'Curl':self.Curl})
-        #savemat('Pi_div_h', {'Pidiv':self.Pi_div_h})
-        #savemat('M', {'M':self.M})
-        #savemat('Mp',{'Mp':Mp})
-        #savemat('ff',{'ff':ff})
-
         # ------------------------------------
-        # prepare HAZMATH solver - UPDATE TO HX PRECONDITIONERS
+        # prepare HAZMATH solver
         # ------------------------------------
         # call HAZMATH solver library
         libHAZMATHsolver = ctypes.cdll.LoadLibrary(
@@ -108,9 +104,6 @@ class Solver(object):
         # ------------------------------------
         # convert
         # ------------------------------------
-        # information about the matrix
-        # !! if calculating \alpha*(u, v), multiply M[0, 0] with alpha !!
-        # e.g. M[0, 0].multiply(alpha)
         Muu_size = self.M[0, 0].shape
         nrowp1_uu = Muu_size[0] + 1
         nrow_uu = ctypes.c_int(Muu_size[0])
@@ -162,7 +155,7 @@ class Solver(object):
         numiters = ctypes.c_int(-1)
 
         # ------------------------------------
-        # solve using HAZMATH - UPDATE TO HX PRECONDITIONERS
+        # solve using HAZMATH
         # ------------------------------------
         libHAZMATHsolver.python_wrapper_krylov_mixed_darcy(
             ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
@@ -201,13 +194,17 @@ class Solver(object):
             ctypes.byref(maxit),
             ctypes.byref(prtlvl), ctypes.byref(numiters))
 
+        logger.info("Done")
         # ------------------------------------
         # convert solution
         # ------------------------------------
         x = sp.array(hazmath_sol)
         numiters = sp.array(numiters)
 
-        return x, numiters
+        # permute solution
+        y = self.permute_solution(x)
+
+        return y, numiters
 
     # ------------------------------------------------------------------------ #
 
@@ -239,18 +236,18 @@ class Solver(object):
         # list of global degrees of freedom per each grid
         dof_count = np.cumsum(np.append(0, np.asarray(self.full_dof)))
 
-        # loop through all block dofs
+        # loop through all block dof
         for pair, bi in self.block_dof.items():
             # node or edge
             g = pair[0]
-            # dofs for this grid
+            # dof for this grid
             local_dof_g = np.arange(dof_count[bi], dof_count[bi + 1])
 
             # if we're in a node (-> flux and pressure)
             if isinstance(g, pp.Grid):
-                # how many flux dofs for this grid
+                # how many flux dof for this grid
                 dim_u = self.gb.graph.nodes[g].num_faces
-                # assume we first order flux then pressure dofs
+                # assume we first order flux then pressure dof
                 dof_u = np.append(dof_u, local_dof_g[:dim_u])
                 dof_p = np.append(dof_p, local_dof_g[dim_u:])
 
@@ -261,7 +258,7 @@ class Solver(object):
         perm = np.hstack((dof_u, dof_l, dof_p))
         self.block_dof_list = [np.concatenate((dof_u, dof_l)), dof_p]
 
-        # sign change in mortar variable
+        # change sign in mortar equations
         signs_ul = sps.diags(np.concatenate((np.ones(dof_u.size), -np.ones(
             dof_l.size))), format="csr")
         signs_p = sps.diags(np.ones(dof_p.size), format="csr")
@@ -271,31 +268,41 @@ class Solver(object):
 
     # ------------------------------------------------------------------------ #
 
-    def setup_system(self, A, b, full_dof, block_dof):
-        # set the dofs count vector
+    def permute_solution(self, x):
+        return self.P.T * x
+
+    # ------------------------------------------------------------------------ #
+
+    def setup_system(self, A, b, block_dof, full_dof):
+        # set the dof count vector
         self.full_dof = full_dof
         self.block_dof = block_dof
 
         # get the permutation - this is needed later in post-processing
+        logger.info("Permute dof")
         perm = self.permute_dofs()
         self.permutation_matrix(perm)
 
+        # TODO: see if copying is actually necessary
         AA = A.copy()
         bb = np.copy(b)
 
         # setup block structure; NB - (-div) matrix is exactly M[1, 0]
-        # block_dof_list contains the all dofs in order (u, lambda, p)
+        # block_dof_list contains the all dof in order (u, lambda, p)
         blocks_no = len(self.block_dof_list)
         self.M = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
         self.f = np.empty(shape=(blocks_no,), dtype=np.object)
 
+        logger.info("Set up saddle point system")
         # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
                 self.M[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
             self.f[row] = self.signs[row] * bb[self.block_dof_list[row]]
+        logger.info("Done")
 
         # set up curl operator and projection operators
+        logger.info("Get operators for preconditioners")
         hcurl = Hcurl(self.gb)
 
         self.Curl = hcurl.curl()
@@ -304,5 +311,6 @@ class Solver(object):
         if self.gb.dim_max() > 2:
             hcurl.compute_edges()
             self.Pi_curl_h = hcurl.Pi_curl_h()
+        logger.info("Done")
 
     # ------------------------------------------------------------------------ #
