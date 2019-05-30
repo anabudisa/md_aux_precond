@@ -26,9 +26,11 @@ class Solver(object):
         # List of block degrees of freedom: 0 -> (u, lambda), 1 -> p
         self.block_dof_list = None
         # Stiffness matrix in 2x2 block form: 0 -> (u, lambda), 1 -> p
-        self.M = None
+        self.A = None
         # Right hand side in 2x1 block form: : 0 -> (u, lambda), 1 -> p
-        self.f = None
+        self.b = None
+        # pressure mass matrix
+        self.M_p = None
         # Curl operator
         self.Curl = None
         # Projection operator nodes to faces dof
@@ -47,18 +49,18 @@ class Solver(object):
 
         # if M in bmat form
         if bmat:
-            Mm = sps.bmat(self.M, format="csc")
-            ff = np.concatenate(tuple(self.f))
+            AA = sps.bmat(self.A, format="csc")
+            bb = np.concatenate(tuple(self.b))
 
         start_time = time.time()
-        upl = sps.linalg.spsolve(Mm, ff)
+        x = sps.linalg.spsolve(AA, bb)
         t = time.time() - start_time
 
         logger.info("Elapsed time of direct solver: " + str(t))
         logger.info("Done")
 
         # permute solution
-        y = self.permute_solution(upl)
+        y = self.permute_solution(x)
 
         return y
 
@@ -66,26 +68,25 @@ class Solver(object):
 
     def solve_hazmath(self, alpha=1., tol=1e-5, maxit=100):
         # solve the system using HAZMATH
-        #          M x = f
+        #          A x = b
 
         # !! NB !!
-        # M[0, 0] represents product (u, v) where u,v \in H(div)
-        # for \alpha * (u, v) multiply M[0, 0] with alpha
-        # e.g. M[0, 0].multiply(alpha)
+        # A[0, 0] represents product (u, v) where u,v \in H(div)
+        # for \alpha * (u, v) multiply A[0, 0] with alpha
+        # e.g. A[0, 0].multiply(alpha)
         #
-        # since M represents a stiffness matrix for the flow problem (Darcy +
+        # since A represents a stiffness matrix for the flow problem (Darcy +
         # m.c.), then
-        # M[1, 0] represents (discrete) -div operator;
+        # A[1, 0] represents (discrete) -div operator;
 
         logger.info("Solve the system with hazmath library using auxiliary "
                     "space preconditioners")
 
         # right hand side
-        ff = np.concatenate(tuple(self.f))
+        bb = np.concatenate(tuple(self.b))
 
         # Mass matrix of pressure
-        Mp = self.P0_mass_matrix()
-        Mp_diag = Mp.diagonal()
+        Mp_diag = self.M_p.diagonal()
 
         # ------------------------------------
         # prepare HAZMATH solver
@@ -104,30 +105,30 @@ class Solver(object):
         # ------------------------------------
         # convert
         # ------------------------------------
-        Muu_size = self.M[0, 0].shape
-        nrowp1_uu = Muu_size[0] + 1
-        nrow_uu = ctypes.c_int(Muu_size[0])
-        ncol_uu = ctypes.c_int(Muu_size[1])
-        nnz_uu = ctypes.c_int(self.M[0, 0].nnz)
+        Auu_size = self.A[0, 0].shape
+        nrowp1_uu = Auu_size[0] + 1
+        nrow_uu = ctypes.c_int(Auu_size[0])
+        ncol_uu = ctypes.c_int(Auu_size[1])
+        nnz_uu = ctypes.c_int(self.A[0, 0].nnz)
 
-        Mup_size = self.M[0, 1].shape
-        nrowp1_up = Mup_size[0] + 1
-        nrow_up = ctypes.c_int(Mup_size[0])
-        ncol_up = ctypes.c_int(Mup_size[1])
+        Aup_size = self.A[0, 1].shape
+        nrowp1_up = Aup_size[0] + 1
+        nrow_up = ctypes.c_int(Aup_size[0])
+        ncol_up = ctypes.c_int(Aup_size[1])
         nnz_up = ctypes.c_int(self.M[0, 1].nnz)
 
         # M[1, 0] is (-div) operator
-        Mpu_size = self.M[1, 0].shape
-        nrowp1_pu = Mpu_size[0] + 1
-        nrow_pu = ctypes.c_int(Mpu_size[0])
-        ncol_pu = ctypes.c_int(Mpu_size[1])
-        nnz_pu = ctypes.c_int(self.M[1, 0].nnz)
+        Apu_size = self.A[1, 0].shape
+        nrowp1_pu = Apu_size[0] + 1
+        nrow_pu = ctypes.c_int(Apu_size[0])
+        ncol_pu = ctypes.c_int(Apu_size[1])
+        nnz_pu = ctypes.c_int(self.A[1, 0].nnz)
 
-        Mpp_size = self.M[1, 1].shape
-        nrowp1_pp = Mpp_size[0] + 1
-        nrow_pp = ctypes.c_int(Mpp_size[0])
-        ncol_pp = ctypes.c_int(Mpp_size[1])
-        nnz_pp = ctypes.c_int(self.M[1, 1].nnz)
+        App_size = self.A[1, 1].shape
+        nrowp1_pp = App_size[0] + 1
+        nrow_pp = ctypes.c_int(App_size[0])
+        ncol_pp = ctypes.c_int(App_size[1])
+        nnz_pp = ctypes.c_int(self.A[1, 1].nnz)
 
         # HX preconditioner
         Pidiv_size = self.Pi_div_h.shape
@@ -150,7 +151,7 @@ class Solver(object):
         nnz_Curl = ctypes.c_int(self.Curl.nnz)
 
         # allocate solution
-        nrow = Muu_size[0] + Mpp_size[0]
+        nrow = Auu_size[0] + App_size[0]
         nrow_double = ctypes.c_double * nrow
         hazmath_sol = nrow_double()
         numiters = ctypes.c_int(-1)
@@ -161,24 +162,24 @@ class Solver(object):
         libHAZMATHsolver.python_wrapper_krylov_mixed_darcy(
             ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
             ctypes.byref(nnz_uu),
-            (ctypes.c_int * nrowp1_uu)(*self.M[0, 0].indptr),
-            (ctypes.c_int * self.M[0, 0].nnz)(*self.M[0, 0].indices),
-            (ctypes.c_double * self.M[0, 0].nnz)(*self.M[0, 0].data),
+            (ctypes.c_int * nrowp1_uu)(*self.A[0, 0].indptr),
+            (ctypes.c_int * self.A[0, 0].nnz)(*self.A[0, 0].indices),
+            (ctypes.c_double * self.A[0, 0].nnz)(*self.A[0, 0].data),
             ctypes.byref(nrow_up),
             ctypes.byref(ncol_up), ctypes.byref(nnz_up),
-            (ctypes.c_int * nrowp1_up)(*self.M[0, 1].indptr),
-            (ctypes.c_int * self.M[0, 1].nnz)(*self.M[0, 1].indices),
-            (ctypes.c_double * self.M[0, 1].nnz)(*self.M[0, 1].data),
+            (ctypes.c_int * nrowp1_up)(*self.A[0, 1].indptr),
+            (ctypes.c_int * self.A[0, 1].nnz)(*self.A[0, 1].indices),
+            (ctypes.c_double * self.A[0, 1].nnz)(*self.A[0, 1].data),
             ctypes.byref(nrow_pu), ctypes.byref(ncol_pu),
             ctypes.byref(nnz_pu),
-            (ctypes.c_int * nrowp1_pu)(*self.M[1, 0].indptr),
-            (ctypes.c_int * self.M[1, 0].nnz)(*self.M[1, 0].indices),
-            (ctypes.c_double * self.M[1, 0].nnz)(*self.M[1, 0].data),
+            (ctypes.c_int * nrowp1_pu)(*self.A[1, 0].indptr),
+            (ctypes.c_int * self.A[1, 0].nnz)(*self.A[1, 0].indices),
+            (ctypes.c_double * self.A[1, 0].nnz)(*self.A[1, 0].data),
             ctypes.byref(nrow_pp),
             ctypes.byref(ncol_pp), ctypes.byref(nnz_pp),
-            (ctypes.c_int * nrowp1_pp)(*self.M[1, 1].indptr),
-            (ctypes.c_int * self.M[1, 1].nnz)(*self.M[1, 1].indices),
-            (ctypes.c_double * self.M[1, 1].nnz)(*self.M[1, 1].data),
+            (ctypes.c_int * nrowp1_pp)(*self.A[1, 1].indptr),
+            (ctypes.c_int * self.A[1, 1].nnz)(*self.A[1, 1].indices),
+            (ctypes.c_double * self.A[1, 1].nnz)(*self.A[1, 1].data),
             ctypes.byref(nrow_Pidiv),
             ctypes.byref(ncol_Pidiv), ctypes.byref(nnz_Pidiv),
             (ctypes.c_int * nrowp1_Pidiv)(*self.Pi_div_h.indptr),
@@ -189,8 +190,8 @@ class Solver(object):
             (ctypes.c_int * nrowp1_Curl)(*self.Curl.indptr),
             (ctypes.c_int * self.Curl.nnz)(*self.Curl.indices),
             (ctypes.c_double * self.Curl.nnz)(*self.Curl.data),
-            (ctypes.c_double * Mpp_size[0])(*Mp_diag),
-            (ctypes.c_double * nrow)(*ff),
+            (ctypes.c_double * App_size[0])(*Mp_diag),
+            (ctypes.c_double * nrow)(*bb),
             ctypes.byref(hazmath_sol), ctypes.byref(tol),
             ctypes.byref(maxit),
             ctypes.byref(prtlvl), ctypes.byref(numiters))
@@ -206,19 +207,6 @@ class Solver(object):
         y = self.permute_solution(x)
 
         return y, numiters
-
-    # ------------------------------------------------------------------------ #
-
-    def P0_mass_matrix(self):
-        # TODO: deprecate for porepy mass matrix
-        matrices = []
-
-        # assemble matrix for each grid in GridBucket
-        for g, d in self.gb:
-            M_g = sps.diags(g.cell_volumes)
-            matrices.append(M_g)
-
-        return sps.block_diag(tuple(matrices), format="csr")
 
     # ------------------------------------------------------------------------ #
 
@@ -274,7 +262,7 @@ class Solver(object):
 
     # ------------------------------------------------------------------------ #
 
-    def setup_system(self, A, b, block_dof, full_dof):
+    def setup_system(self, A, M, b, block_dof, full_dof):
         # set the dof count vector
         self.full_dof = full_dof
         self.block_dof = block_dof
@@ -289,17 +277,18 @@ class Solver(object):
         bb = np.copy(b)
 
         # setup block structure; NB - (-div) matrix is exactly M[1, 0]
-        # block_dof_list contains the all dof in order (u, lambda, p)
+        # block_dof_list contains the all dof in order ((u, lambda), p)
         blocks_no = len(self.block_dof_list)
-        self.M = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
-        self.f = np.empty(shape=(blocks_no,), dtype=np.object)
+        self.A = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
+        self.b = np.empty(shape=(blocks_no,), dtype=np.object)
 
         logger.info("Set up saddle point system")
         # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
-                self.M[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
-            self.f[row] = self.signs[row] * bb[self.block_dof_list[row]]
+                self.A[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
+            self.b[row] = self.signs[row] * bb[self.block_dof_list[row]]
+        self.M_p = M[self.block_dof_list[1], :].tocsc()[:, self.block_dof_list[1]].tocsr()
         logger.info("Done")
 
         # set up curl operator and projection operators
