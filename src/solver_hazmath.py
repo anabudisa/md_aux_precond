@@ -272,10 +272,6 @@ class Solver(object):
         perm = self.permute_dofs()
         self.permutation_matrix(perm)
 
-        # TODO: see if copying is actually necessary
-        AA = A.copy()
-        bb = np.copy(b)
-
         # setup block structure; NB - (-div) matrix is exactly M[1, 0]
         # block_dof_list contains the all dof in order ((u, lambda), p)
         blocks_no = len(self.block_dof_list)
@@ -286,8 +282,8 @@ class Solver(object):
         # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
-                self.A[row, col] = self.signs[row] * AA[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
-            self.b[row] = self.signs[row] * bb[self.block_dof_list[row]]
+                self.A[row, col] = self.signs[row] * A[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
+            self.b[row] = self.signs[row] * b[self.block_dof_list[row]]
         self.M_p = M[self.block_dof_list[1], :].tocsc()[:, self.block_dof_list[1]].tocsr()
         logger.info("Done")
 

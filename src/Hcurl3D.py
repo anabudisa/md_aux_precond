@@ -32,8 +32,8 @@ class Hcurl(object):
         # Mapping to the right plane
         R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
 
-        # jump TODO: make sparse
-        J = np.zeros(shape=(g_down.num_faces, g_up.num_nodes))
+        # jump
+        J = sps.lil_matrix((g_down.num_faces, g_up.num_nodes))
 
         # find which higher-dim faces and lower-dim faces (cells) relate to
         # each other
@@ -109,8 +109,8 @@ class Hcurl(object):
         nn_g_up = self.gb.graph.node[g_up]["node_number"]
         num_edges_up = self.num_edges[nn_g_up]
 
-        # jump TODO: make sparse
-        J = np.zeros(shape=(g_down.num_faces, num_edges_up))
+        # jump
+        J = sps.lil_matrix((g_down.num_faces, num_edges_up))
 
         # find which higher-dim faces and lower-dim faces (cells) relate to
         # each other
