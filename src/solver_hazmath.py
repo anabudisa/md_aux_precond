@@ -115,7 +115,7 @@ class Solver(object):
         nrowp1_up = Aup_size[0] + 1
         nrow_up = ctypes.c_int(Aup_size[0])
         ncol_up = ctypes.c_int(Aup_size[1])
-        nnz_up = ctypes.c_int(self.M[0, 1].nnz)
+        nnz_up = ctypes.c_int(self.A[0, 1].nnz)
 
         # M[1, 0] is (-div) operator
         Apu_size = self.A[1, 0].shape
@@ -159,7 +159,7 @@ class Solver(object):
         # ------------------------------------
         # solve using HAZMATH
         # ------------------------------------
-        libHAZMATHsolver.python_wrapper_krylov_mixed_darcy(
+        libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX(
             ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
             ctypes.byref(nnz_uu),
             (ctypes.c_int * nrowp1_uu)(*self.A[0, 0].indptr),

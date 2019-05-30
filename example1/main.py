@@ -28,9 +28,8 @@ def test_mesh_size():
 
         table_h.append([mesh_size, it])
 
+    print(tabulate(table_h, headers=["h", "iter"]))
     np.savetxt("mesh_size_iter.csv", table_h, fmt="%d")
-
-    return tabulate(table_h, headers=["h", "iter"])
 
 # ---------------------------------------------------------------------------- #
 
@@ -55,16 +54,15 @@ def test_alpha():
 
         table_alpha.append([alpha, it])
 
+    print(tabulate(table_alpha, headers=["alpha", "iter"]))
     np.savetxt("alpha_iter.csv", table_alpha, fmt="%d")
-
-    return tabulate(table_alpha, headers=["eps", "iter"])
 
 # ---------------------------------------------------------------------------- #
 
 
 def main():
     file_name = "network_geiger.csv"
-    mesh_size = 1./16
+    mesh_size = 1./32
     alpha = 1.
 
     param = {"tol": 1e-6,
@@ -81,6 +79,7 @@ def main():
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    main()
+    # main()
     # test_alpha()
-    # test_mesh_size()
+    test_mesh_size()
+

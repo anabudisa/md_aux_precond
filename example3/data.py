@@ -25,7 +25,7 @@ def bc_flag(g, tol):
 # ---------------------------------------------------------------------------- #
 
 
-def make_mesh(mesh_size, file_name, plot=False):
+def make_mesh(file_name, mesh_size, plot=False):
 
     # mesh arguments
     kwargs = {"mesh_size_frac": mesh_size,
@@ -60,7 +60,7 @@ def solve_(file_name, mesh_size, alpha, param):
 
     # set up solver
     solver = Solver(gb, darcy_flow.discr)
-    solver.setup_system(A, b, block_dof, full_dof)
+    solver.setup_system(A, M, b, block_dof, full_dof)
 
     # solve with hazmath library solvers
     x_haz, iters = solver.solve_hazmath(alpha)

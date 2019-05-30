@@ -28,9 +28,8 @@ def test_mesh_size():
 
         table_h.append([mesh_size, it])
 
+    print(tabulate(table_h, headers=["h", "iter"]))
     np.savetxt("mesh_size_iter.csv", table_h, fmt="%d")
-
-    return tabulate(table_h, headers=["h", "iter"])
 
 # ---------------------------------------------------------------------------- #
 
@@ -55,9 +54,8 @@ def test_alpha():
 
         table_alpha.append([alpha, it])
 
+    print(tabulate(table_alpha, headers=["alpha", "iter"]))
     np.savetxt("alpha_iter.csv", table_alpha, fmt="%d")
-
-    return tabulate(table_alpha, headers=["eps", "iter"])
 
 # ---------------------------------------------------------------------------- #
 
