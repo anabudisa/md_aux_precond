@@ -67,18 +67,18 @@ def solve_(file_name, mesh_size, alpha, param):
     logger.info("Hazmath iters: " + str(iters))
 
     # solve with direct python solver
-    x_dir = solver.solve_direct()
+    # x_dir = solver.solve_direct()
 
     # compute error
-    error = np.linalg.norm(x_dir - x_haz) / np.linalg.norm(x_dir)
-    logger.info("Error: " + str(error))
+    # error = np.linalg.norm(x_dir - x_haz) / np.linalg.norm(x_dir)
+    # logger.info("Error: " + str(error))
 
     # extract variables and export hazmath solution
     darcy_flow.extract_solution(x_haz, block_dof, full_dof)
     darcy_flow.export_solution(folder, "sol_hazmath")
 
     # extract variables and export direct solution
-    darcy_flow.extract_solution(x_dir, block_dof, full_dof)
-    darcy_flow.export_solution(folder, "sol_direct")
+    # darcy_flow.extract_solution(x_dir, block_dof, full_dof)
+    # darcy_flow.export_solution(folder, "sol_direct")
 
     return iters

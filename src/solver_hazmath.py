@@ -137,13 +137,6 @@ class Solver(object):
         ncol_Pidiv = ctypes.c_int(Pidiv_size[1])
         nnz_Pidiv = ctypes.c_int(self.Pi_div_h.nnz)
 
-        if self.gb.dim_max() > 2:
-            Picurl_size = self.Pi_curl_h.shape
-            nrowp1_Picurl = Picurl_size[0] + 1
-            nrow_Picurl = ctypes.c_int(Picurl_size[0])
-            ncol_Picurl = ctypes.c_int(Picurl_size[1])
-            nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
-
         Curl_size = self.Curl.shape
         nrowp1_Curl = Curl_size[0] + 1
         nrow_Curl = ctypes.c_int(Curl_size[0])
@@ -159,42 +152,93 @@ class Solver(object):
         # ------------------------------------
         # solve using HAZMATH
         # ------------------------------------
-        libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX(
-            ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
-            ctypes.byref(nnz_uu),
-            (ctypes.c_int * nrowp1_uu)(*self.A[0, 0].indptr),
-            (ctypes.c_int * self.A[0, 0].nnz)(*self.A[0, 0].indices),
-            (ctypes.c_double * self.A[0, 0].nnz)(*self.A[0, 0].data),
-            ctypes.byref(nrow_up),
-            ctypes.byref(ncol_up), ctypes.byref(nnz_up),
-            (ctypes.c_int * nrowp1_up)(*self.A[0, 1].indptr),
-            (ctypes.c_int * self.A[0, 1].nnz)(*self.A[0, 1].indices),
-            (ctypes.c_double * self.A[0, 1].nnz)(*self.A[0, 1].data),
-            ctypes.byref(nrow_pu), ctypes.byref(ncol_pu),
-            ctypes.byref(nnz_pu),
-            (ctypes.c_int * nrowp1_pu)(*self.A[1, 0].indptr),
-            (ctypes.c_int * self.A[1, 0].nnz)(*self.A[1, 0].indices),
-            (ctypes.c_double * self.A[1, 0].nnz)(*self.A[1, 0].data),
-            ctypes.byref(nrow_pp),
-            ctypes.byref(ncol_pp), ctypes.byref(nnz_pp),
-            (ctypes.c_int * nrowp1_pp)(*self.A[1, 1].indptr),
-            (ctypes.c_int * self.A[1, 1].nnz)(*self.A[1, 1].indices),
-            (ctypes.c_double * self.A[1, 1].nnz)(*self.A[1, 1].data),
-            ctypes.byref(nrow_Pidiv),
-            ctypes.byref(ncol_Pidiv), ctypes.byref(nnz_Pidiv),
-            (ctypes.c_int * nrowp1_Pidiv)(*self.Pi_div_h.indptr),
-            (ctypes.c_int * self.Pi_div_h.nnz)(*self.Pi_div_h.indices),
-            (ctypes.c_double * self.Pi_div_h.nnz)(*self.Pi_div_h.data),
-            ctypes.byref(nrow_Curl),
-            ctypes.byref(ncol_Curl), ctypes.byref(nnz_Curl),
-            (ctypes.c_int * nrowp1_Curl)(*self.Curl.indptr),
-            (ctypes.c_int * self.Curl.nnz)(*self.Curl.indices),
-            (ctypes.c_double * self.Curl.nnz)(*self.Curl.data),
-            (ctypes.c_double * App_size[0])(*Mp_diag),
-            (ctypes.c_double * nrow)(*bb),
-            ctypes.byref(hazmath_sol), ctypes.byref(tol),
-            ctypes.byref(maxit),
-            ctypes.byref(prtlvl), ctypes.byref(numiters))
+        if self.gb.dim_max() > 2:
+            # 3D wrapper
+            Picurl_size = self.Pi_curl_h.shape
+            nrowp1_Picurl = Picurl_size[0] + 1
+            nrow_Picurl = ctypes.c_int(Picurl_size[0])
+            ncol_Picurl = ctypes.c_int(Picurl_size[1])
+            nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
+
+            libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX_3D(
+                ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
+                ctypes.byref(nnz_uu),
+                (ctypes.c_int * nrowp1_uu)(*self.A[0, 0].indptr),
+                (ctypes.c_int * self.A[0, 0].nnz)(*self.A[0, 0].indices),
+                (ctypes.c_double * self.A[0, 0].nnz)(*self.A[0, 0].data),
+                ctypes.byref(nrow_up),
+                ctypes.byref(ncol_up), ctypes.byref(nnz_up),
+                (ctypes.c_int * nrowp1_up)(*self.A[0, 1].indptr),
+                (ctypes.c_int * self.A[0, 1].nnz)(*self.A[0, 1].indices),
+                (ctypes.c_double * self.A[0, 1].nnz)(*self.A[0, 1].data),
+                ctypes.byref(nrow_pu), ctypes.byref(ncol_pu),
+                ctypes.byref(nnz_pu),
+                (ctypes.c_int * nrowp1_pu)(*self.A[1, 0].indptr),
+                (ctypes.c_int * self.A[1, 0].nnz)(*self.A[1, 0].indices),
+                (ctypes.c_double * self.A[1, 0].nnz)(*self.A[1, 0].data),
+                ctypes.byref(nrow_pp),
+                ctypes.byref(ncol_pp), ctypes.byref(nnz_pp),
+                (ctypes.c_int * nrowp1_pp)(*self.A[1, 1].indptr),
+                (ctypes.c_int * self.A[1, 1].nnz)(*self.A[1, 1].indices),
+                (ctypes.c_double * self.A[1, 1].nnz)(*self.A[1, 1].data),
+                ctypes.byref(nrow_Pidiv),
+                ctypes.byref(ncol_Pidiv), ctypes.byref(nnz_Pidiv),
+                (ctypes.c_int * nrowp1_Pidiv)(*self.Pi_div_h.indptr),
+                (ctypes.c_int * self.Pi_div_h.nnz)(*self.Pi_div_h.indices),
+                (ctypes.c_double * self.Pi_div_h.nnz)(*self.Pi_div_h.data),
+                ctypes.byref(nrow_Curl),
+                ctypes.byref(ncol_Curl), ctypes.byref(nnz_Curl),
+                (ctypes.c_int * nrowp1_Curl)(*self.Curl.indptr),
+                (ctypes.c_int * self.Curl.nnz)(*self.Curl.indices),
+                (ctypes.c_double * self.Curl.nnz)(*self.Curl.data),
+                ctypes.byref(nrow_Picurl),
+                ctypes.byref(ncol_Picurl), ctypes.byref(nnz_Picurl),
+                (ctypes.c_int * nrowp1_Picurl)(*self.Pi_curl_h.indptr),
+                (ctypes.c_int * self.Pi_curl_h.nnz)(*self.Pi_curl_h.indices),
+                (ctypes.c_double * self.Pi_curl_h.nnz)(*self.Pi_curl_h.data),
+                (ctypes.c_double * App_size[0])(*Mp_diag),
+                (ctypes.c_double * nrow)(*bb),
+                ctypes.byref(hazmath_sol), ctypes.byref(tol),
+                ctypes.byref(maxit),
+                ctypes.byref(prtlvl), ctypes.byref(numiters))
+        else:
+            # 2D wrapper
+            libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX_2D(
+                ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
+                ctypes.byref(nnz_uu),
+                (ctypes.c_int * nrowp1_uu)(*self.A[0, 0].indptr),
+                (ctypes.c_int * self.A[0, 0].nnz)(*self.A[0, 0].indices),
+                (ctypes.c_double * self.A[0, 0].nnz)(*self.A[0, 0].data),
+                ctypes.byref(nrow_up),
+                ctypes.byref(ncol_up), ctypes.byref(nnz_up),
+                (ctypes.c_int * nrowp1_up)(*self.A[0, 1].indptr),
+                (ctypes.c_int * self.A[0, 1].nnz)(*self.A[0, 1].indices),
+                (ctypes.c_double * self.A[0, 1].nnz)(*self.A[0, 1].data),
+                ctypes.byref(nrow_pu), ctypes.byref(ncol_pu),
+                ctypes.byref(nnz_pu),
+                (ctypes.c_int * nrowp1_pu)(*self.A[1, 0].indptr),
+                (ctypes.c_int * self.A[1, 0].nnz)(*self.A[1, 0].indices),
+                (ctypes.c_double * self.A[1, 0].nnz)(*self.A[1, 0].data),
+                ctypes.byref(nrow_pp),
+                ctypes.byref(ncol_pp), ctypes.byref(nnz_pp),
+                (ctypes.c_int * nrowp1_pp)(*self.A[1, 1].indptr),
+                (ctypes.c_int * self.A[1, 1].nnz)(*self.A[1, 1].indices),
+                (ctypes.c_double * self.A[1, 1].nnz)(*self.A[1, 1].data),
+                ctypes.byref(nrow_Pidiv),
+                ctypes.byref(ncol_Pidiv), ctypes.byref(nnz_Pidiv),
+                (ctypes.c_int * nrowp1_Pidiv)(*self.Pi_div_h.indptr),
+                (ctypes.c_int * self.Pi_div_h.nnz)(*self.Pi_div_h.indices),
+                (ctypes.c_double * self.Pi_div_h.nnz)(*self.Pi_div_h.data),
+                ctypes.byref(nrow_Curl),
+                ctypes.byref(ncol_Curl), ctypes.byref(nnz_Curl),
+                (ctypes.c_int * nrowp1_Curl)(*self.Curl.indptr),
+                (ctypes.c_int * self.Curl.nnz)(*self.Curl.indices),
+                (ctypes.c_double * self.Curl.nnz)(*self.Curl.data),
+                (ctypes.c_double * App_size[0])(*Mp_diag),
+                (ctypes.c_double * nrow)(*bb),
+                ctypes.byref(hazmath_sol), ctypes.byref(tol),
+                ctypes.byref(maxit),
+                ctypes.byref(prtlvl), ctypes.byref(numiters))
 
         logger.info("Done")
         # ------------------------------------
