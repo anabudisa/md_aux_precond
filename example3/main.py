@@ -81,7 +81,7 @@ def main():
 
 def main_no_frac():
     file_name = "no_fractures_3d.csv"
-    mesh_size = 1./16
+    mesh_size = 1./4
     alpha = 1.
 
     param = {"tol": 1e-6,
@@ -99,7 +99,7 @@ def main_no_frac():
 
 
 if __name__ == "__main__":
-    main()
-    # main_no_frac()
+    # main()
+    main_no_frac()
     # test_alpha()
     # test_mesh_size()

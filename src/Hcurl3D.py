@@ -492,6 +492,8 @@ class Hcurl(object):
                 Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             else:
+                # TODO: check if this should be sps.hstack([Pi_gx, Pi_gy])
+                #  where Pi_gx  = Pi_gy = sps.identity(g.num_nodes)
                 Pi_g = sps.identity(g.num_nodes, format='csr')
 
             Pi[nn_g, nn_g] = Pi_g

@@ -343,7 +343,7 @@ class Solver(object):
         if self.gb.dim_max() > 2:
             self.Pi_curl_h = hcurl.Pi_curl_h()
 
-        # import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #
