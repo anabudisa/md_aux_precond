@@ -78,7 +78,28 @@ def main():
 
 # ---------------------------------------------------------------------------- #
 
+
+def main_no_frac():
+    file_name = "no_fractures_3d.csv"
+    mesh_size = 1./16
+    alpha = 1.
+
+    param = {"tol": 1e-6,
+             "km": 1.,
+             "kf_t": 1.,
+             "kf_n": 1.,
+             "aperture": 1.,
+             "alpha": 1.
+             }
+
+    data.solve_(file_name, mesh_size, alpha, param)
+
+
+# ---------------------------------------------------------------------------- #
+
+
 if __name__ == "__main__":
     main()
+    # main_no_frac()
     # test_alpha()
     # test_mesh_size()

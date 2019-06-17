@@ -317,7 +317,9 @@ class Solver(object):
         self.permutation_matrix(perm)
 
         # setup block structure; NB - (-div) matrix is exactly M[1, 0]
-        # block_dof_list contains the all dof in order ((u, lambda), p)
+        # block_dof
+
+        # _list contains the all dof in order ((u, lambda), p)
         blocks_no = len(self.block_dof_list)
         self.A = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
         self.b = np.empty(shape=(blocks_no,), dtype=np.object)
@@ -340,6 +342,8 @@ class Solver(object):
 
         if self.gb.dim_max() > 2:
             self.Pi_curl_h = hcurl.Pi_curl_h()
+
+        # import pdb; pdb.set_trace()
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #
