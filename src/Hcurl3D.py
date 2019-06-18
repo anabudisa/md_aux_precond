@@ -401,9 +401,9 @@ class Hcurl(object):
             nn_g = d['node_number']
             if g.dim == 3:
                 fn = g.face_nodes
-                Pi_gx = fn.copy()
-                Pi_gy = fn.copy()
-                Pi_gz = fn.copy()
+                Pi_gx = fn.copy().asfptype()
+                Pi_gy = fn.copy().asfptype()
+                Pi_gz = fn.copy().asfptype()
 
                 for face in np.arange(g.num_faces):
                     face_indices = np.arange(fn.indptr[face], fn.indptr[face+1])
@@ -421,8 +421,8 @@ class Hcurl(object):
                 R = cg.project_plane_matrix(g.nodes, check_planar=False)
                 fn = g.face_nodes
 
-                Pi_gx = fn.copy()
-                Pi_gy = fn.copy()
+                Pi_gx = fn.copy().asfptype()
+                Pi_gy = fn.copy().asfptype()
 
                 for face in np.arange(g.num_faces):
                     face_indices = np.arange(fn.indptr[face], fn.indptr[face+1])
@@ -476,9 +476,9 @@ class Hcurl(object):
             num_edges = self.num_edges[nn_g]
             en = self.edge_nodes[nn_g]
             if g.dim == 3:
-                Pi_gx = en.copy()
-                Pi_gy = en.copy()
-                Pi_gz = en.copy()
+                Pi_gx = en.copy().asfptype()
+                Pi_gy = en.copy().asfptype()
+                Pi_gz = en.copy().asfptype()
 
                 for edge in np.arange(num_edges):
                     edge_indices = np.arange(en.indptr[edge], en.indptr[edge+1])
@@ -492,8 +492,6 @@ class Hcurl(object):
                 Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             else:
-                # TODO: check if this should be sps.hstack([Pi_gx, Pi_gy])
-                #  where Pi_gx  = Pi_gy = sps.identity(g.num_nodes)
                 Pi_g = sps.identity(g.num_nodes, format='csr')
 
             Pi[nn_g, nn_g] = Pi_g
