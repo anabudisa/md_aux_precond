@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sps
+import time
 
 from porepy.utils import setmembership
 from porepy.utils import comp_geom as cg
@@ -14,6 +15,7 @@ class Hcurl(object):
         # Grid bucket
         self.gb = gb
         self.tol = 1e-12
+        self.cpu_time = []
 
         self.num_edges = np.zeros(shape=(self.gb.size(),), dtype=int)
         self.face_edges = np.empty(shape=(self.gb.size(),), dtype=np.object)
@@ -24,6 +26,7 @@ class Hcurl(object):
     # ------------------------------------------------------------------------ #
 
     def curl_jump_2d(self, e, mg):
+        start_time = time.time()
         # jump part of mixed-dim curl operator
 
         # lower and higher-dim grid adjacent to the mortar grid mg
@@ -81,6 +84,9 @@ class Hcurl(object):
                 J[nodes_down[0], nodes_up[1]] = orientations[1]
                 J[nodes_down[1], nodes_up[0]] = orientations[0]
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Curl jump 2d", str(t)])
+
         return sps.csc_matrix(J, dtype='d')
 
     # ------------------------------------------------------------------------ #
@@ -102,6 +108,7 @@ class Hcurl(object):
     # ------------------------------------------------------------------------ #
 
     def curl_jump_3d(self, e, mg):
+        start_time = time.time()
         # jump part of mixed-dim curl operator
 
         # lower and higher-dim grid adjacent to the mortar grid mg
@@ -150,6 +157,7 @@ class Hcurl(object):
             edges_tangents = np.zeros((3, 3))
 
             # find edges centers for all edges of that face
+            # TODO: add edges centers to compute edges
             for i in np.arange(3):
                 edge = edges_up[i]
                 nodes_up = en_up.indices[
@@ -161,6 +169,7 @@ class Hcurl(object):
             # faces centers of the corresponding lower-dim cell
             down_xyz = g_down.face_centers[:, faces_down]
             # down_xyz[ind_match] = edges_centers_xyz
+            # TODO: improve match_coordinates (too slow)
             ind_match = self.match_coordinates(edges_centers_xyz, down_xyz)
 
             # orientation identifying
@@ -182,11 +191,15 @@ class Hcurl(object):
             # with ind_match
             J[faces_down[ind_match], edges_up] = orientations
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Curl jump 3d", str(t)])
+
         return sps.csc_matrix(J, dtype='d')
 
     # ------------------------------------------------------------------------ #
 
     def curl_grid(self, g):
+        start_time = time.time()
         # local curl matrix (not yet decomposed into interior
         # and mortar)
         if g.dim == 3:
@@ -220,12 +233,15 @@ class Hcurl(object):
                     C_g[loc[0], face] = -1.
 
         # transpose! we need nodes_faces mapping
+        t = time.time() - start_time
+        self.cpu_time.append(["Curl grid", str(t)])
+
         return C_g.T.tocsr()
 
     # ------------------------------------------------------------------------ #
 
     def curl(self):
-
+        start_time = time.time()
         # mixed-dimensional curl operator
         # curl : H(curl) -> H(div)
         # we loop over all curl dof, which are all nodes of 3D grids
@@ -344,11 +360,15 @@ class Hcurl(object):
                             curl_all_grids[nn_g_down, nn_g] -= Pi_mg.T * \
                                                                Pi_mg * J_g
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Curl", str(t)])
+
         return sps.bmat(curl_all_grids, format='csr')
 
     # ------------------------------------------------------------------------ #
 
     def compute_edges(self):
+        start_time = time.time()
         for g, d in self.gb:
             if g.dim == 3:
                 ng = d["node_number"]
@@ -390,9 +410,13 @@ class Hcurl(object):
                 self.face_edges[ng] = sps.csc_matrix((orientations, indices,
                                                   indptr))
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Compute edges", str(t)])
+
     # ------------------------------------------------------------------------ #
 
     def Pi_div_h(self):
+        start_time = time.time()
         # global Pi matrix
         Pi = np.empty(shape=(self.gb.size(), self.gb.size()), dtype=np.object)
 
@@ -460,11 +484,15 @@ class Hcurl(object):
                     Pi[nn_mg, nn_g] = P_mg * Signs * Pi_g
                     Pi[nn_g, nn_g] -= P_mg.T * P_mg * Pi_g
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Pi div", str(t)])
+
         return sps.bmat(Pi, format='csr')
 
     # ------------------------------------------------------------------------ #
 
     def Pi_curl_h(self):
+        start_time = time.time()
         grids_23 = self.gb.get_grids(lambda g: g.dim >= 2)
         n_grids_23 = grids_23.size
         # global Pi matrix
@@ -495,5 +523,8 @@ class Hcurl(object):
                 Pi_g = sps.identity(g.num_nodes, format='csr')
 
             Pi[nn_g, nn_g] = Pi_g
+
+        t = time.time() - start_time
+        self.cpu_time.append(["Pi curl", str(t)])
 
         return sps.bmat(Pi, format='csr')

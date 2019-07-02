@@ -21,7 +21,7 @@ def test_mesh_size():
              }
 
     table_h = []
-    for k in np.arange(2, 7):
+    for k in np.arange(2, 6):
         mesh_size = 1./(2. ** k)
 
         it = data.solve_(file_name, mesh_size, alpha, param)

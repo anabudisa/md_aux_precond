@@ -1,5 +1,6 @@
 import numpy as np
 import porepy as pp
+from tabulate import tabulate
 
 import sys; sys.path.insert(0, "../src/")
 
@@ -65,6 +66,7 @@ def solve_(file_name, mesh_size, alpha, param):
     # solve with hazmath library solvers
     x_haz, iters = solver.solve_hazmath(alpha)
     logger.info("Hazmath iters: " + str(iters))
+    print(tabulate(solver.cpu_time, headers=["Process", "Time"]))
 
     # solve with direct python solver
     # x_dir = solver.solve_direct()
@@ -74,8 +76,8 @@ def solve_(file_name, mesh_size, alpha, param):
     # logger.info("Error: " + str(error))
 
     # extract variables and export hazmath solution
-    darcy_flow.extract_solution(x_haz, block_dof, full_dof)
-    darcy_flow.export_solution(folder, "sol_hazmath")
+    # darcy_flow.extract_solution(x_haz, block_dof, full_dof)
+    # darcy_flow.export_solution(folder, "sol_hazmath")
 
     # extract variables and export direct solution
     # darcy_flow.extract_solution(x_dir, block_dof, full_dof)

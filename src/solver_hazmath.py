@@ -3,6 +3,7 @@ import scipy as sp
 import scipy.sparse as sps
 import time
 import ctypes
+from tabulate import tabulate
 
 import porepy as pp
 
@@ -17,6 +18,8 @@ class Solver(object):
         self.gb = gb
         # Discretization
         self.discr = discr
+        # solver time in table
+        self.cpu_time = []
         # All degrees of freedom
         self.full_dof = None
         # Block indices to grid-variable combination
@@ -79,9 +82,9 @@ class Solver(object):
         # m.c.), then
         # A[1, 0] represents (discrete) -div operator;
 
-        logger.info("Solve the system with hazmath library using auxiliary "
-                    "space preconditioners")
+        logger.info("Setup hazmath solver")
 
+        start_time = time.time()
         # right hand side
         bb = np.concatenate(tuple(self.b))
 
@@ -149,16 +152,27 @@ class Solver(object):
         hazmath_sol = nrow_double()
         numiters = ctypes.c_int(-1)
 
+        t1 = time.time() - start_time
         # ------------------------------------
         # solve using HAZMATH
         # ------------------------------------
         if self.gb.dim_max() > 2:
             # 3D wrapper
+            start_time = time.time()
+
             Picurl_size = self.Pi_curl_h.shape
             nrowp1_Picurl = Picurl_size[0] + 1
             nrow_Picurl = ctypes.c_int(Picurl_size[0])
             ncol_Picurl = ctypes.c_int(Picurl_size[1])
             nnz_Picurl = ctypes.c_int(self.Pi_curl_h.nnz)
+
+            t2 = time.time() - start_time
+            self.cpu_time.append(["Solver setup", str(t1 + t2)])
+            logger.info("Elapsed time solver setup: " + str(t1 + t2))
+            logger.info("Done")
+
+            logger.info("Solve the system with hazmath library using auxiliary "
+                        "space preconditioners")
 
             libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX_3D(
                 ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
@@ -203,6 +217,13 @@ class Solver(object):
                 ctypes.byref(prtlvl), ctypes.byref(numiters))
         else:
             # 2D wrapper
+            self.cpu_time.append(["Solver setup", str(t1)])
+            logger.info("Elapsed time solver setup: " + str(t1))
+            logger.info("Done")
+
+            logger.info("Solve the system with hazmath library using auxiliary "
+                        "space preconditioners")
+
             libHAZMATHsolver.python_wrapper_krylov_mixed_darcy_HX_2D(
                 ctypes.byref(nrow_uu), ctypes.byref(ncol_uu),
                 ctypes.byref(nnz_uu),
@@ -313,28 +334,41 @@ class Solver(object):
 
         # get the permutation - this is needed later in post-processing
         logger.info("Permute dof")
+        start_time = time.time()
+
         perm = self.permute_dofs()
         self.permutation_matrix(perm)
 
-        # setup block structure; NB - (-div) matrix is exactly M[1, 0]
-        # block_dof
+        t = time.time() - start_time
+        self.cpu_time.append(["Perm setup", str(t)])
+        logger.info("Elapsed time permutation setup: " + str(t))
+        logger.info("Done")
 
-        # _list contains the all dof in order ((u, lambda), p)
+        # setup block structure; NB - (-div) matrix is exactly M[1, 0]
+        # block_dof_list contains the all dof in order ((u, lambda), p)
         blocks_no = len(self.block_dof_list)
         self.A = np.empty(shape=(blocks_no, blocks_no), dtype=np.object)
         self.b = np.empty(shape=(blocks_no,), dtype=np.object)
 
         logger.info("Set up saddle point system")
+        start_time = time.time()
         # self.signs[row] *
         for row in np.arange(blocks_no):
             for col in np.arange(blocks_no):
                 self.A[row, col] = self.signs[row] * A[self.block_dof_list[row], :].tocsc()[:,self.block_dof_list[col]].tocsr()
             self.b[row] = self.signs[row] * b[self.block_dof_list[row]]
         self.M_p = M[self.block_dof_list[1], :].tocsc()[:, self.block_dof_list[1]].tocsr()
+
+        t = time.time() - start_time
+        self.cpu_time.append(["Saddle point setup", str(t)])
+        logger.info("Elapsed time saddle point system setup: " + str(t))
         logger.info("Done")
 
+        logger.info("Total number of dof: " + str(self.A[0, 0].shape[0] + self.M_p.shape[0]))
+
         # set up curl operator and projection operators
-        logger.info("Get operators for preconditioners")
+        logger.info("Get auxiliary operators for preconditioners")
+        start_time = time.time()
         hcurl = Hcurl(self.gb)
 
         self.Curl = hcurl.curl()
@@ -343,6 +377,15 @@ class Solver(object):
         if self.gb.dim_max() > 2:
             self.Pi_curl_h = hcurl.Pi_curl_h()
 
+        t = time.time() - start_time
+        self.cpu_time.append(["Aux operators setup", str(t)])
+        logger.info("Elapsed time setup auxiliary operators: " + str(t))
+        print(tabulate(hcurl.cpu_time, headers=["hcurl process", "time"]))
+        cum_sum = 0
+        for list_ in hcurl.cpu_time:
+            if list_[0] not in ["Curl", "Pi div", "Pi curl", "Compute edges"]:
+                cum_sum += float(list_[1])
+        print("Cum sum curl: ", cum_sum)
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #
