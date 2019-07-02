@@ -20,6 +20,9 @@ class Hcurl(object):
         self.num_edges = np.zeros(shape=(self.gb.size(),), dtype=int)
         self.face_edges = np.empty(shape=(self.gb.size(),), dtype=np.object)
         self.edge_nodes = np.empty(shape=(self.gb.size(),), dtype=np.object)
+        
+        self.edge_centers = np.empty(shape=(self.gb.size(),), dtype=np.object)
+        self.edge_tangents = np.empty(shape=(self.gb.size(),), dtype=np.object)
 
         self.compute_edges()
 
@@ -93,7 +96,7 @@ class Hcurl(object):
 
     @staticmethod
     def match_coordinates(a, b):
-        # TODO: check how slow this is
+        # TODO: check how slow this is (WB: Still the fastest I can think of)
         # compare and match columns of a and b
         # return: ind s.t. b[:, ind] = a
         # Note: we assume that all columns will match
@@ -152,22 +155,9 @@ class Hcurl(object):
             # find their normals (orientation)
             face_normals_down = g_down.face_normals[:, faces_down]
 
-            # check the coordinates! swap the nodes if coordinates don't match
-            # edges of that face
-            en_up = self.edge_nodes[nn_g_up]
-            # edges centers; edges tangents
-            edges_centers_xyz = np.zeros((3, 3))
-            edges_tangents = np.zeros((3, 3))
-
-            # find edges centers for all edges of that face
-            # TODO: add edges centers and tangents to compute_edges
-            for i in np.arange(3):
-                edge = edges_up[i]
-                nodes_up = en_up.indices[
-                       en_up.indptr[edge]:en_up.indptr[edge + 1]]
-                up_xyz = g_up.nodes[:, nodes_up]
-                edges_centers_xyz[:, i] = np.sum(up_xyz, axis=1) / 2
-                edges_tangents[:, i] = up_xyz[:, 1] - up_xyz[:, 0]
+            # Extract edges centers and tangents
+            edges_centers_xyz = self.edge_centers[nn_g_up][:, edges_up]
+            edges_tangents    = self.edge_tangents[nn_g_up][:, edges_up]
 
             # faces centers of the corresponding lower-dim cell
             down_xyz = g_down.face_centers[:, faces_down]
@@ -398,6 +388,13 @@ class Hcurl(object):
                 edges.sort(axis=1)
                 edges, _, indices = setmembership.unique_rows(edges)
                 self.num_edges[ng] = edges.shape[0]
+                
+                # Calculate edge centers and tangents
+                xyz_0 = g.nodes[:, edges[:,0].astype(int)]
+                xyz_1 = g.nodes[:, edges[:,1].astype(int)]
+                self.edge_centers[ng] = (xyz_0 + xyz_1) / 2
+                self.edge_tangents[ng] = xyz_1 - xyz_0
+
                 # Generate edge-node connectivity such that
                 # edge_nodes(i, j) = +/- 1:
                 # edge j points to/away from node i
