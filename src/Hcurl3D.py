@@ -93,6 +93,7 @@ class Hcurl(object):
 
     @staticmethod
     def match_coordinates(a, b):
+        # TODO: check how slow this is
         # compare and match columns of a and b
         # return: ind s.t. b[:, ind] = a
         # Note: we assume that all columns will match
@@ -117,6 +118,7 @@ class Hcurl(object):
         num_edges_up = self.num_edges[nn_g_up]
 
         # jump
+        # mapping 3D interface edges to 2D faces (edges of the triangles)
         J = sps.lil_matrix((g_down.num_faces, num_edges_up))
 
         # find which higher-dim faces and lower-dim faces (cells) relate to
@@ -124,6 +126,7 @@ class Hcurl(object):
         cells, faces, data = sps.find(
             mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
 
+        # TODO: improve this loop
         for i in np.arange(np.size(data)):
             face = faces[i]
             cell = cells[i]
@@ -157,7 +160,7 @@ class Hcurl(object):
             edges_tangents = np.zeros((3, 3))
 
             # find edges centers for all edges of that face
-            # TODO: add edges centers to compute edges
+            # TODO: add edges centers and tangents to compute_edges
             for i in np.arange(3):
                 edge = edges_up[i]
                 nodes_up = en_up.indices[
@@ -368,6 +371,7 @@ class Hcurl(object):
     # ------------------------------------------------------------------------ #
 
     def compute_edges(self):
+        # TODO: improve cpu time of this
         start_time = time.time()
         for g, d in self.gb:
             if g.dim == 3:
