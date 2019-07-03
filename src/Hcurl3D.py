@@ -46,12 +46,14 @@ class Hcurl(object):
         cells, faces, data = sps.find(
             mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
 
+        # Precompute CSR version of cell_faces for fast lookup
+        cf_up = g_up.cell_faces.tocsr()
+
         for i in np.arange(np.size(data)):
             face = faces[i]
             cell = cells[i]
 
             # find face normals of interface faces of higher-dim grid
-            cf_up = g_up.cell_faces.tocsr()
             # outward or inward?
             outward = cf_up.data[cf_up.indptr[face]:cf_up.indptr[face+1]][0]
             face_normal = np.dot(R, g_up.face_normals[:, face] * outward)
@@ -80,6 +82,7 @@ class Hcurl(object):
             down_xy = g_down.face_centers[:, nodes_down]
             up_xy = g_up.nodes[:, nodes_up]
 
+            # TODO Check whether this is correct at fracture tips
             if np.linalg.norm(down_xy[:, 0] - up_xy[:, 0]) < self.tol:
                 J[nodes_down[0], nodes_up[0]] = orientations[0]
                 J[nodes_down[1], nodes_up[1]] = orientations[1]
@@ -129,13 +132,14 @@ class Hcurl(object):
         cells, faces, data = sps.find(
             mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
 
-        # TODO: improve this loop
+        # Precompute CSR version of cell_faces for fast lookup
+        cf_up = g_up.cell_faces.tocsr()
+        
         for i in np.arange(np.size(data)):
             face = faces[i]
             cell = cells[i]
 
             # find face normals of interface faces of higher-dim grid
-            cf_up = g_up.cell_faces.tocsr()
             # outward or inward?
             outward = cf_up.data[cf_up.indptr[face]:cf_up.indptr[face + 1]][0]
             # outward face normal
@@ -162,7 +166,6 @@ class Hcurl(object):
             # faces centers of the corresponding lower-dim cell
             down_xyz = g_down.face_centers[:, faces_down]
             # down_xyz[ind_match] = edges_centers_xyz
-            # TODO: improve match_coordinates (too slow)
             ind_match = self.match_coordinates(edges_centers_xyz, down_xyz)
 
             # orientation identifying
@@ -183,6 +186,7 @@ class Hcurl(object):
             # also remember to match the appropriate edges (3d) and faces (2d)
             # with ind_match
             J[faces_down[ind_match], edges_up] = orientations
+            # TODO Check whether this is correct at fracture tips
 
         t = time.time() - start_time
         self.cpu_time.append(["Curl jump 3d", str(t)])
