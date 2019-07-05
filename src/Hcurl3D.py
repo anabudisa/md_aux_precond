@@ -82,13 +82,15 @@ class Hcurl(object):
             down_xy = g_down.face_centers[:, nodes_down]
             up_xy = g_up.nodes[:, nodes_up]
 
-            # TODO Check whether this is correct at fracture tips
             if np.linalg.norm(down_xy[:, 0] - up_xy[:, 0]) < self.tol:
                 J[nodes_down[0], nodes_up[0]] = orientations[0]
                 J[nodes_down[1], nodes_up[1]] = orientations[1]
             else:
                 J[nodes_down[0], nodes_up[1]] = orientations[1]
                 J[nodes_down[1], nodes_up[0]] = orientations[0]
+
+        # Jump maps to zero at fracture tips
+        J[g_down.tags['tip_faces'], :] = 0.
 
         t = time.time() - start_time
         self.cpu_time.append(["Curl jump 2d", str(t)])
@@ -186,7 +188,10 @@ class Hcurl(object):
             # also remember to match the appropriate edges (3d) and faces (2d)
             # with ind_match
             J[faces_down[ind_match], edges_up] = orientations
-            # TODO Check whether this is correct at fracture tips
+
+        import pdb; pdb.set_trace()
+        # Jump maps to zero at fracture tips
+        J[g_down.tags['tip_faces'], :] = 0.
 
         t = time.time() - start_time
         self.cpu_time.append(["Curl jump 3d", str(t)])
