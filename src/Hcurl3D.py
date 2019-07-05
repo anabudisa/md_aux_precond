@@ -189,7 +189,6 @@ class Hcurl(object):
             # with ind_match
             J[faces_down[ind_match], edges_up] = orientations
 
-        import pdb; pdb.set_trace()
         # Jump maps to zero at fracture tips
         J[g_down.tags['tip_faces'], :] = 0.
 
