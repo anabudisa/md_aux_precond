@@ -62,15 +62,15 @@ def test_alpha():
 
 def main():
     file_name = "network_geiger_3d.csv"
-    mesh_size = 1./16
-    alpha = 1.
+    mesh_size = 1./64
+    alpha = 1e2
 
     param = {"tol": 1e-6,
              "km": 1.,
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1.
+             "alpha": 1e2
              }
 
     data.solve_(file_name, mesh_size, alpha, param)

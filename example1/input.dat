@@ -75,7 +75,7 @@ AMG_postsmooth_iter		= 1
 
 AMG_coarse_dof			= 100
 AMG_coarse_solver		= 32    % coarsest solver: 0 iterative | 32 UMFPACK
-AMG_coarse_scaling		= OFF	% OFF | ON
+AMG_coarse_scaling		= ON	% OFF | ON
 
 AMG_amli_degree          	= 2     % degree of the polynomial used by AMLI cycle
 AMG_nl_amli_krylov_type  	= 5	% Krylov method in nonlinear AMLI cycle: 5 GCG |  6 GCR

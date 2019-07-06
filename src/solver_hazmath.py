@@ -95,15 +95,16 @@ class Solver(object):
         # prepare HAZMATH solver
         # ------------------------------------
         # call HAZMATH solver library
-        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-            '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-        # '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
+        #    '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
+        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+            '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
 
         # parameters for HAZMATH solver
         prtlvl = ctypes.c_int(3)
         tol = ctypes.c_double(tol)
         maxit = ctypes.c_int(maxit)
+        alpha = ctypes.c_double(alpha)
 
         # ------------------------------------
         # convert
@@ -212,8 +213,9 @@ class Solver(object):
                 (ctypes.c_double * self.Pi_curl_h.nnz)(*self.Pi_curl_h.data),
                 (ctypes.c_double * App_size[0])(*Mp_diag),
                 (ctypes.c_double * nrow)(*bb),
-                ctypes.byref(hazmath_sol), ctypes.byref(tol),
-                ctypes.byref(maxit),
+                ctypes.byref(hazmath_sol),
+                ctypes.byref(alpha),
+                ctypes.byref(tol), ctypes.byref(maxit),
                 ctypes.byref(prtlvl), ctypes.byref(numiters))
         else:
             # 2D wrapper
@@ -257,8 +259,9 @@ class Solver(object):
                 (ctypes.c_double * self.Curl.nnz)(*self.Curl.data),
                 (ctypes.c_double * App_size[0])(*Mp_diag),
                 (ctypes.c_double * nrow)(*bb),
-                ctypes.byref(hazmath_sol), ctypes.byref(tol),
-                ctypes.byref(maxit),
+                ctypes.byref(hazmath_sol),
+                ctypes.byref(alpha),
+                ctypes.byref(tol), ctypes.byref(maxit),
                 ctypes.byref(prtlvl), ctypes.byref(numiters))
 
         logger.info("Done")

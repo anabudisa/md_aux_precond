@@ -63,14 +63,14 @@ def test_alpha():
 def main():
     file_name = "network_sotra.csv"
     mesh_size = 600./16
-    alpha = 1.
+    alpha = 1e4
 
     param = {"tol": 1e-6,
              "km": 1.,
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1.
+             "alpha": 1e4
              }
 
     data.solve_(file_name, mesh_size, alpha, param)
