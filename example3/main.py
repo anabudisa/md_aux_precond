@@ -2,10 +2,11 @@ import numpy as np
 from tabulate import tabulate
 
 import sys
-sys.path.insert(0, '/home/anci/Dropbox/new_porepy/porepy/src/porepy/')  # robust point in polyhedron
+# sys.path.insert(0, '/home/anci/Dropbox/new_porepy/porepy/src/porepy/')  # robust point in polyhedron
 sys.path.insert(0, '../src/')  # common
 
 import data
+from logger import logger
 
 
 def test_mesh_size():
@@ -17,11 +18,10 @@ def test_mesh_size():
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1.
              }
 
     table_h = []
-    for k in np.arange(2, 6):
+    for k in np.arange(2, 7):
         mesh_size = 1./(2. ** k)
 
         it = data.solve_(file_name, mesh_size, alpha, param)
@@ -36,25 +36,34 @@ def test_mesh_size():
 
 def test_alpha():
     file_name = "network_geiger_3d.csv"
-    mesh_size = 1./16
+    mesh_size = 1./32
 
     param = {"tol": 1e-6,
              "km": 1.,
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1.
              }
 
     table_alpha = []
-    for k in np.arange(5):
-        alpha = 1./(10. ** k)
+    for k in np.arange(-4, 5, 2):
+        alpha = 10. ** k
+        table_K = []
+        for l in np.arange(1):
+            param["kf_t"] = 10. ** l
+            param["kf_n"] = 10. ** l
 
-        it = data.solve_(file_name, mesh_size, alpha, param)
+            logger.info("Parameters: K_t = " + str(param["kf_t"]) + "; K_n = " + str(param["kf_n"]) + "; alpha = " + str(alpha))
+            
+            if alpha <  10. ** (-l):
+                table_K.append(0)
+            else:
+                it = data.solve_(file_name, mesh_size, alpha, param)
+                table_K.append(it)
 
-        table_alpha.append([alpha, it])
+        table_alpha.append(table_K)
 
-    print(tabulate(table_alpha, headers=["alpha", "iter"]))
+    print(table_alpha)
     np.savetxt("alpha_iter.csv", table_alpha, fmt="%d")
 
 # ---------------------------------------------------------------------------- #
@@ -62,15 +71,14 @@ def test_alpha():
 
 def main():
     file_name = "network_geiger_3d.csv"
-    mesh_size = 1./64
-    alpha = 1e2
+    mesh_size = 1./16
+    alpha = 1.
 
     param = {"tol": 1e-6,
              "km": 1.,
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1e2
              }
 
     data.solve_(file_name, mesh_size, alpha, param)
@@ -89,7 +97,6 @@ def main_no_frac():
              "kf_t": 1.,
              "kf_n": 1.,
              "aperture": 1.,
-             "alpha": 1.
              }
 
     data.solve_(file_name, mesh_size, alpha, param)
@@ -99,7 +106,7 @@ def main_no_frac():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     # main_no_frac()
-    # test_alpha()
+    test_alpha()
     # test_mesh_size()

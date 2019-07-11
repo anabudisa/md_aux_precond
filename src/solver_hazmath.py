@@ -97,8 +97,10 @@ class Solver(object):
         # call HAZMATH solver library
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
         #    '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
+        # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+        #     '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
         libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-            '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
+            '/home/abudis01/hazmath/lib/libhazmath.so')
 
         # parameters for HAZMATH solver
         prtlvl = ctypes.c_int(3)
@@ -368,7 +370,8 @@ class Solver(object):
         logger.info("Done")
 
         logger.info("Total number of dof: " + str(self.A[0, 0].shape[0] + self.M_p.shape[0]))
-
+        logger.info("Flux number of dof: " + str(self.A[0, 0].shape[0]))
+        
         # set up curl operator and projection operators
         logger.info("Get auxiliary operators for preconditioners")
         start_time = time.time()
@@ -383,12 +386,12 @@ class Solver(object):
         t = time.time() - start_time
         self.cpu_time.append(["Aux operators setup", str(t)])
         logger.info("Elapsed time setup auxiliary operators: " + str(t))
-        print(tabulate(hcurl.cpu_time, headers=["hcurl process", "time"]))
-        cum_sum = 0
-        for list_ in hcurl.cpu_time:
-            if list_[0] not in ["Curl", "Pi div", "Pi curl", "Compute edges"]:
-                cum_sum += float(list_[1])
-        print("Cum sum curl: ", cum_sum)
+        # print(tabulate(hcurl.cpu_time, headers=["hcurl process", "time"]))
+        # cum_sum = 0
+        # for list_ in hcurl.cpu_time:
+        #     if list_[0] not in ["Curl", "Pi div", "Pi curl", "Compute edges"]:
+        #         cum_sum += float(list_[1])
+        # print("Cum sum curl: ", cum_sum)
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #

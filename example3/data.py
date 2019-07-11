@@ -67,7 +67,7 @@ def solve_(file_name, mesh_size, alpha, param):
     x_haz, iters = solver.solve_hazmath(alpha)
     logger.info("Hazmath iters: " + str(iters))
     print(tabulate(solver.cpu_time, headers=["Process", "Time"]))
-
+    # iters = 0
     # solve with direct python solver
     # x_dir = solver.solve_direct()
 

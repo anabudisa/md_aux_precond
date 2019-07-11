@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.sparse as sps
-
+import time
 import porepy as pp
 
 from logger import logger
@@ -146,8 +146,8 @@ class Flow(object):
         assembler = pp.Assembler()
 
         logger.info("Assemble the flow problem")
+        start_time = time.time()
         block_A, block_b, block_dof, full_dof = assembler.assemble_matrix_rhs(self.gb, add_matrices=False)
-
         # unpack the matrices just computed
         coupling_name = self.coupling_name + (
             "_" + self.mortar + "_" + self.variable + "_" + self.variable
@@ -160,6 +160,9 @@ class Flow(object):
         M = block_A[mass_name]
         A = block_A[discr_name] + block_A[coupling_name]
         b = block_b[discr_name] + block_b[coupling_name] + block_b[source_name]
+
+        t = time.time() - start_time
+        logger.info("Elapsed time assemble flow problem: " + str(t))
         logger.info("Done")
 
         return A, M, b, block_dof, full_dof
