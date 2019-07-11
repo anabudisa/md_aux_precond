@@ -2,7 +2,7 @@ import numpy as np
 from tabulate import tabulate
 
 import sys
-# sys.path.insert(0, '/home/anci/Dropbox/new_porepy/porepy/src/porepy/')  # robust point in polyhedron
+sys.path.insert(0, '/home/anci/Dropbox/new_porepy/porepy/src/porepy/')  # robust point in polyhedron
 sys.path.insert(0, '../src/')  # common
 
 import data
@@ -55,7 +55,7 @@ def test_alpha():
 
             logger.info("Parameters: K_t = " + str(param["kf_t"]) + "; K_n = " + str(param["kf_n"]) + "; alpha = " + str(alpha))
             
-            if alpha <  10. ** (-l):
+            if alpha < 10. ** (-l):
                 table_K.append(0)
             else:
                 it = data.solve_(file_name, mesh_size, alpha, param)
@@ -106,7 +106,7 @@ def main_no_frac():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     # main_no_frac()
-    test_alpha()
+    # test_alpha()
     # test_mesh_size()

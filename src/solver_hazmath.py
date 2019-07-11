@@ -95,12 +95,12 @@ class Solver(object):
         # prepare HAZMATH solver
         # ------------------------------------
         # call HAZMATH solver library
-        # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-        #    '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
+        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+           '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
         #     '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
-        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-            '/home/abudis01/hazmath/lib/libhazmath.so')
+        # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+        #     '/home/abudis01/hazmath/lib/libhazmath.so')
 
         # parameters for HAZMATH solver
         prtlvl = ctypes.c_int(3)

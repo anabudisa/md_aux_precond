@@ -1,6 +1,7 @@
 import numpy as np
 import porepy as pp
 from tabulate import tabulate
+import pickle
 
 import sys; sys.path.insert(0, "../src/")
 
@@ -29,15 +30,15 @@ def bc_flag(g, tol):
 def make_mesh(file_name, mesh_size, plot=False):
 
     # mesh arguments
-    kwargs = {"mesh_size_frac": mesh_size,
-              "mesh_size_min": mesh_size,
-              "mesh_size_bound": mesh_size}
+    args = {"mesh_size_frac": mesh_size,
+            "mesh_size_min": mesh_size,
+            "mesh_size_bound": mesh_size}
 
     # Import fractures coordinates from file
     network_3d = pp.fracture_importer.network_3d_from_csv(file_name)
 
     # Generate a mixed-dimensional mesh and geometry
-    gb = network_3d.mesh(kwargs)
+    gb = network_3d.mesh(args)
 
     if plot:
         pp.plot_grid(gb, alpha=0, info="all")
@@ -47,9 +48,49 @@ def make_mesh(file_name, mesh_size, plot=False):
 # ---------------------------------------------------------------------------- #
 
 
+def create_grid(from_file=True, generate_network=False):
+    """ Obtain domain and grid bucket. Default is to load a pickled bucket;
+    alternatively, a .geo or a .msh file is available.
+    """
+    if generate_network:
+        file_csv = "geiger_3d.csv"
+        domain = {
+            "xmin": 0,
+            "xmax": 1,
+            "ymin": 0,
+            "ymax": 1,
+            "zmin": 0,
+            "zmax": 1,
+        }
+
+        network = pp.fracture_importer.network_3d_from_csv(file_csv, has_domain=False)
+        network.impose_external_boundary(domain)
+        network.find_intersections()
+        network.split_intersections()
+        network.to_gmsh("dummy.geo")
+
+        pickle.dump(network, open("network_geiger", "wb"))
+
+    network = pickle.load(open("network_geiger", "rb"))
+    domain = network.domain
+    if from_file:
+        gb = pickle.load(open("gridbucket_geiger3d.grid", "rb"))
+    else:
+        gb = pp.fracture_importer.dfm_from_gmsh(
+            "gmsh_frac_file.msh", 3, network, ensure_matching_face_cell=True
+        )
+        pickle.dump(gb, open("gridbucket_geiger3d.grid", "wb"))
+
+    return gb
+
+
+# ---------------------------------------------------------------------------- #
+
+
 def solve_(file_name, mesh_size, alpha, param):
     # create mixed-dimensional grids
-    gb = make_mesh(file_name, mesh_size)
+    # gb = make_mesh(file_name, mesh_size)
+    gb = create_grid()
 
     # set parameters and boundary conditions
     folder = "solution"
