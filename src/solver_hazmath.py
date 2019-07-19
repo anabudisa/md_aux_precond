@@ -43,6 +43,10 @@ class Solver(object):
         # Sign fixing - cos for some reason mortar variable gives a negative
         # definite matrix
         self.signs = None
+        # node tags for div functions
+        self.node_tags_div = None
+        # node tags for curl functions
+        self.node_tags_curl = None
 
     # ------------------------------------------------------------------------ #
 
@@ -379,9 +383,11 @@ class Solver(object):
 
         self.Curl = hcurl.curl()
         self.Pi_div_h = hcurl.Pi_div_h()
+        self.node_tags_div = np.hstack(hcurl.node_tags_div)
 
         if self.gb.dim_max() > 2:
             self.Pi_curl_h = hcurl.Pi_curl_h()
+        self.node_tags_curl = np.hstack(hcurl.node_tags_curl)
 
         t = time.time() - start_time
         self.cpu_time.append(["Aux operators setup", str(t)])
@@ -395,3 +401,20 @@ class Solver(object):
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #
+
+    # def test(self):
+    #
+    #     print("Shape A_mass: ", self.A[0, 0].shape)
+    #     A_div = self.A[0, 0] + self.A[0, 1] * self.M_p * self.A[1, 0]
+    #     print("Shape A_div: ", A_div.shape)
+    #     print("Shape Pi_div: ", self.Pi_div_h.shape)
+    #     print("Shape Pi_curl: ", self.Pi_curl_h.shape)
+    #     print("Shape Curl: ", self.Curl.shape)
+    #     A_div_grad = self.Pi_div_h.T * A_div * self.Pi_div_h
+    #     A_curl_grad = self.Pi_curl_h.T * self.Curl.T * A_div * self.Curl * self.Pi_curl_h
+    #     print("Shape A_div_grad: ", A_div_grad.shape)
+    #     print("Shape A_curl_grad: ", A_curl_grad.shape)
+    #     print("Node tags div shape: ", self.node_tags_div.shape)
+    #     print("Node tags curl shape: ", self.node_tags_curl.shape)
+    #     print("Number of nodes in gb: ", self.gb.num_nodes())
+

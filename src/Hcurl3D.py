@@ -16,6 +16,8 @@ class Hcurl(object):
         self.gb = gb
         self.tol = 1e-12
         self.cpu_time = []
+        self.node_tags_div = np.empty(shape=(self.gb.num_graph_nodes(),), dtype=np.object)
+        self.node_tags_curl = None
 
         self.num_edges = np.zeros(shape=(self.gb.size(),), dtype=int)
         self.face_edges = np.empty(shape=(self.gb.size(),), dtype=np.object)
@@ -432,7 +434,14 @@ class Hcurl(object):
         # assume 3D case
         for g, d in self.gb:
             nn_g = d['node_number']
+            # set up dimension tags for nodes
+            tags = g.dim * np.ones(g.num_nodes, dtype=int)
+
+            # set up Pi_div operator
             if g.dim == 3:
+                # tags
+                self.node_tags_div[nn_g] = np.concatenate((tags, tags, tags))
+                # Pi_div
                 fn = g.face_nodes
                 Pi_gx = fn.copy().asfptype()
                 Pi_gy = fn.copy().asfptype()
@@ -451,6 +460,9 @@ class Hcurl(object):
                 Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             elif g.dim == 2:
+                # tags
+                self.node_tags_div[nn_g] = np.concatenate((tags, tags))
+                # Pi_div
                 R = cg.project_plane_matrix(g.nodes, check_planar=False)
                 fn = g.face_nodes
 
@@ -468,6 +480,9 @@ class Hcurl(object):
 
                 Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T])
             else:
+                # tags
+                self.node_tags_div[nn_g] = tags
+                # Pi_div
                 normal_norm = np.linalg.norm(g.face_normals, axis=0)
                 Pi_g = sps.diags(normal_norm, format='csr')
 
@@ -506,13 +521,21 @@ class Hcurl(object):
         n_grids_23 = grids_23.size
         # global Pi matrix
         Pi = np.empty(shape=(n_grids_23, n_grids_23), dtype=np.object)
+        # tags
+        self.node_tags_curl = np.empty(shape=(n_grids_23,), dtype=np.object)
 
         # assume 3D case
         for g in grids_23:
+            # tags
+            tags = g.dim * np.ones(g.num_nodes, dtype=int)
+            # Pi_curl
             nn_g = self.gb.graph.node[g]['node_number']
             num_edges = self.num_edges[nn_g]
             en = self.edge_nodes[nn_g]
             if g.dim == 3:
+                # tags
+                self.node_tags_curl[nn_g] = np.concatenate((tags, tags, tags))
+                # Pi_curl
                 Pi_gx = en.copy().asfptype()
                 Pi_gy = en.copy().asfptype()
                 Pi_gz = en.copy().asfptype()
@@ -529,6 +552,9 @@ class Hcurl(object):
                 Pi_g = sps.hstack([Pi_gx.T, Pi_gy.T, Pi_gz.T])
 
             else:
+                # tags
+                self.node_tags_curl[nn_g] = tags
+                # Pi_curl
                 Pi_g = sps.identity(g.num_nodes, format='csr')
 
             Pi[nn_g, nn_g] = Pi_g
