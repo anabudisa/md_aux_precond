@@ -60,6 +60,33 @@ def test_alpha():
 # ---------------------------------------------------------------------------- #
 
 
+def test_fracture_no():
+    fracs = [1, 5, 10, 20, 40, 63]
+
+    mesh_size = 600./32
+    alpha = 1.
+
+    param = {"tol": 1e-6,
+             "km": 1.,
+             "kf_t": 1.,
+             "kf_n": 1.,
+             "aperture": 1.,
+             }
+
+    table_fracs = []
+    for frac_no in fracs:
+        file_name = "network" + str(frac_no) + ".csv"
+
+        it = data.solve_(file_name, mesh_size, alpha, param)
+
+        table_fracs.append([frac_no, it])
+
+    print(tabulate(table_fracs, headers=["fracs", "iter"]))
+    np.savetxt("fracs_no_iter.csv", table_fracs, fmt="%d")
+
+# ---------------------------------------------------------------------------- #
+
+
 def main():
     file_name = "network_sotra.csv"
     mesh_size = 600./16
