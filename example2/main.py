@@ -64,7 +64,7 @@ def test_fracture_no():
     fracs = [1, 5, 10, 20, 40, 63]
 
     mesh_size = 600./32
-    alpha = 1.
+    alpha = 1000.
 
     param = {"tol": 1e-6,
              "km": 1.,
@@ -75,7 +75,7 @@ def test_fracture_no():
 
     table_fracs = []
     for frac_no in fracs:
-        file_name = "network" + str(frac_no) + ".csv"
+        file_name = "network_sotra_" + str(frac_no) + ".csv"
 
         it = data.solve_(file_name, mesh_size, alpha, param)
 
@@ -106,6 +106,7 @@ def main():
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    main()
+    # main()
     # test_alpha()
     # test_mesh_size()
+    test_fracture_no()

@@ -89,8 +89,8 @@ def create_grid(from_file=True, generate_network=False):
 
 def solve_(file_name, mesh_size, alpha, param):
     # create mixed-dimensional grids
-    # gb = make_mesh(file_name, mesh_size)
-    gb = create_grid()
+    gb = make_mesh(file_name, mesh_size)
+    # gb = create_grid(from_file=False)
 
     # set parameters and boundary conditions
     folder = "solution"

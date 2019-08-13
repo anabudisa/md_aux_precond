@@ -43,9 +43,9 @@ class Solver(object):
         # Sign fixing - cos for some reason mortar variable gives a negative
         # definite matrix
         self.signs = None
-        # node tags for div functions
+        # dimension node tags for div functions (for A_div_grad)
         self.node_tags_div = None
-        # node tags for curl functions
+        # dimension node tags for curl functions (for A_curl_grad)
         self.node_tags_curl = None
 
     # ------------------------------------------------------------------------ #
@@ -99,10 +99,10 @@ class Solver(object):
         # prepare HAZMATH solver
         # ------------------------------------
         # call HAZMATH solver library
-        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-           '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-        #     '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
+        #    '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
+        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+            '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
         #     '/home/abudis01/hazmath/lib/libhazmath.so')
 
@@ -387,7 +387,7 @@ class Solver(object):
 
         if self.gb.dim_max() > 2:
             self.Pi_curl_h = hcurl.Pi_curl_h()
-        self.node_tags_curl = np.hstack(hcurl.node_tags_curl)
+            self.node_tags_curl = np.hstack(hcurl.node_tags_curl)
 
         t = time.time() - start_time
         self.cpu_time.append(["Aux operators setup", str(t)])

@@ -1,5 +1,7 @@
 import numpy as np
 import porepy as pp
+from tabulate import tabulate
+import pickle
 
 import sys; sys.path.insert(0, "../src/")
 
@@ -27,17 +29,16 @@ def bc_flag(g, tol):
 
 def make_mesh(file_name, mesh_size, plot=False):
 
-    # define the domain
-    domain = {"xmin": 0, "xmax": 700, "ymin": 0, "ymax": 600}
+    # mesh arguments
+    args = {"mesh_size_frac": mesh_size,
+            "mesh_size_min": mesh_size,
+            "mesh_size_bound": mesh_size}
 
     # Import fractures coordinates from file
-    network_2d = pp.fracture_importer.network_2d_from_csv(file_name,
-                                                          domain=domain)
+    network_3d = pp.fracture_importer.network_3d_from_csv(file_name)
 
     # Generate a mixed-dimensional mesh and geometry
-    gb = network_2d.mesh({"mesh_size_frac": mesh_size,
-                          "mesh_size_min": mesh_size,
-                          "mesh_size_bound": mesh_size})
+    gb = network_3d.mesh(args)
 
     if plot:
         pp.plot_grid(gb, alpha=0, info="all")
@@ -47,9 +48,53 @@ def make_mesh(file_name, mesh_size, plot=False):
 # ---------------------------------------------------------------------------- #
 
 
+def create_grid(from_file=True, generate_network=False, tol=1e-3):
+    """ Obtain domain and grid bucket. Default is to load a pickled bucket;
+    alternatively, a .geo or a .msh file is available.
+    """
+    if generate_network:
+        file_csv = "fracture_network.csv"
+        domain = {
+            "xmin": -500,
+            "xmax": 350,
+            "ymin": 100,
+            "ymax": 1500,
+            "zmin": -100,
+            "zmax": 500,
+        }
+
+        network = pp.fracture_importer.network_3d_from_csv(
+            file_csv, has_domain=False, tol=tol
+        )
+        network.impose_external_boundary(domain)
+        network.find_intersections()
+        network.split_intersections()
+        network.to_gmsh("dummy.geo")
+
+        pickle.dump(network, open("network_52_fracs", "wb"))
+
+    network = pickle.load(open("network_52_fracs", "rb"))
+
+    if from_file:
+        gb = pickle.load(open("gridbucket_52_fracs.grid", "rb"))
+    else:
+        gb = pp.fracture_importer.dfm_from_gmsh(
+            "gmsh_frac_file.geo", 3, network, ensure_matching_face_cell=True
+        )
+        pickle.dump(gb, open("gridbucket_52_fracs.grid", "wb"))
+
+    # import pdb; pdb.set_trace()
+
+    return gb
+
+
+# ---------------------------------------------------------------------------- #
+
+
 def solve_(file_name, mesh_size, alpha, param):
     # create mixed-dimensional grids
-    gb = make_mesh(file_name, mesh_size)
+    # gb = make_mesh(file_name, mesh_size)
+    gb = create_grid()
 
     # set parameters and boundary conditions
     folder = "solution"
@@ -66,7 +111,8 @@ def solve_(file_name, mesh_size, alpha, param):
     # solve with hazmath library solvers
     x_haz, iters = solver.solve_hazmath(alpha)
     logger.info("Hazmath iters: " + str(iters))
-
+    print(tabulate(solver.cpu_time, headers=["Process", "Time"]))
+    # iters = 0
     # solve with direct python solver
     # x_dir = solver.solve_direct()
 
@@ -75,8 +121,8 @@ def solve_(file_name, mesh_size, alpha, param):
     # logger.info("Error: " + str(error))
 
     # extract variables and export hazmath solution
-    # darcy_flow.extract_solution(x_haz, block_dof, full_dof)
-    # darcy_flow.export_solution(folder, "sol_hazmath")
+    darcy_flow.extract_solution(x_haz, block_dof, full_dof)
+    darcy_flow.export_solution(folder, "sol_hazmath")
 
     # extract variables and export direct solution
     # darcy_flow.extract_solution(x_dir, block_dof, full_dof)
