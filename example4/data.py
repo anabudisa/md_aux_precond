@@ -93,26 +93,26 @@ def create_grid(from_file=True, generate_network=False, tol=1e-3):
 
 def solve_(file_name, mesh_size, alpha, param):
     # create mixed-dimensional grids
-    # gb = make_mesh(file_name, mesh_size)
-    gb = create_grid()
-
+    gb = make_mesh(file_name, mesh_size)
+    # gb = create_grid()
+    
     # set parameters and boundary conditions
     folder = "solution"
     darcy_flow = Flow(gb, folder)
     darcy_flow.set_data(param, bc_flag)
-
+    darcy_flow.export_grid(folder, "sol_direct")
     # get matrix and rhs
-    A, M, b, block_dof, full_dof = darcy_flow.matrix_rhs()
+    # A, M, b, block_dof, full_dof = darcy_flow.matrix_rhs()
 
     # set up solver
-    solver = Solver(gb, darcy_flow.discr)
-    solver.setup_system(A, M, b, block_dof, full_dof)
+    # solver = Solver(gb, darcy_flow.discr)
+    # solver.setup_system(A, M, b, block_dof, full_dof)
 
     # solve with hazmath library solvers
-    x_haz, iters = solver.solve_hazmath(alpha)
-    logger.info("Hazmath iters: " + str(iters))
-    print(tabulate(solver.cpu_time, headers=["Process", "Time"]))
-    # iters = 0
+    # x_haz, iters = solver.solve_hazmath(alpha)
+    # logger.info("Hazmath iters: " + str(iters))
+    # print(tabulate(solver.cpu_time, headers=["Process", "Time"]))
+    iters = 0
     # solve with direct python solver
     # x_dir = solver.solve_direct()
 
@@ -121,8 +121,8 @@ def solve_(file_name, mesh_size, alpha, param):
     # logger.info("Error: " + str(error))
 
     # extract variables and export hazmath solution
-    darcy_flow.extract_solution(x_haz, block_dof, full_dof)
-    darcy_flow.export_solution(folder, "sol_hazmath")
+    # darcy_flow.extract_solution(x_haz, block_dof, full_dof)
+    # darcy_flow.export_solution(folder, "sol_hazmath")
 
     # extract variables and export direct solution
     # darcy_flow.extract_solution(x_dir, block_dof, full_dof)

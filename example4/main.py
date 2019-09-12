@@ -52,9 +52,9 @@ def test_alpha():
 
 
 def main():
-    file_name = "fracture_network.csv"
-    mesh_size = 1. / 16
-    alpha = 1e5
+    file_name = "fracture_network_withdomain.csv"
+    mesh_size = 1500. / 8
+    alpha = 1e6
 
     param = {"tol": 1e-6,
              "km": 1.,

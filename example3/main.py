@@ -71,7 +71,7 @@ def test_alpha():
 
 def main():
     file_name = "network_geiger_3d.csv"
-    mesh_size = 1./128
+    mesh_size = 1./32
     alpha = 1.
 
     param = {"tol": 1e-6,

@@ -192,3 +192,12 @@ class Flow(object):
         logger.info("Done")
 
     # ------------------------------------------------------------------------------#
+
+    def export_grid(self, sol_folder, sol_file_name="solution"):
+
+        logger.info("Export variables")
+        self.save = pp.Exporter(self.gb, sol_file_name, folder=sol_folder)
+        self.save.write_vtk()
+        logger.info("Done")
+
+    # ------------------------------------------------------------------------------#

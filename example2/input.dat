@@ -55,7 +55,7 @@ linear_itsolver_tol		= 1e-8  % tolerance for linear iterative solver
 linear_stop_type		= 1     	% 1 ||r||/||b|| | 2 ||r||_B/||b||_B | % 3 ||r||/||x||
 linear_restart 			= 100		% restart for GMRes
 
-linear_precond_type		= 42 	%40 - diag, 41 - lower, 42 - upper
+linear_precond_type		= 40 	%40 - diag, 41 - lower, 42 - upper
 
 
 %----------------------------------------------%

@@ -3,6 +3,7 @@ import scipy as sp
 import scipy.sparse as sps
 import time
 import ctypes
+# import suitesparse
 from tabulate import tabulate
 
 import porepy as pp
@@ -101,10 +102,10 @@ class Solver(object):
         # call HAZMATH solver library
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
         #    '/home/anci/Dropbox/hazmath2/hazmath/lib/libhazmath.so')
-        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-            '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
         # libHAZMATHsolver = ctypes.cdll.LoadLibrary(
-        #     '/home/abudis01/hazmath/lib/libhazmath.so')
+        #    '/home/xiaozhehu/Work/Projects/HAZMATH/hazmath/lib/libhazmath.so')
+        libHAZMATHsolver = ctypes.cdll.LoadLibrary(
+            '/home/abudis01/hazmath/lib/libhazmath.so')
 
         # parameters for HAZMATH solver
         prtlvl = ctypes.c_int(3)
@@ -368,6 +369,11 @@ class Solver(object):
             self.b[row] = self.signs[row] * b[self.block_dof_list[row]]
         self.M_p = M[self.block_dof_list[1], :].tocsc()[:, self.block_dof_list[1]].tocsr()
 
+        logger.info("Matrix \t Shape")
+        logger.info("A00 \t"+str(self.A[0,0].shape))
+        logger.info("A01 \t"+str(self.A[0,1].shape))
+        logger.info("A10 \t"+str(self.A[1,0].shape))
+        logger.info("A11 \t"+str(self.A[1,1].shape))
         t = time.time() - start_time
         self.cpu_time.append(["Saddle point setup", str(t)])
         logger.info("Elapsed time saddle point system setup: " + str(t))

@@ -36,19 +36,18 @@ def test_mesh_size():
 
 def test_alpha():
     file_name = "network_sotra.csv"
-    mesh_size = 600./16
+    mesh_size = 600./32
 
     param = {"tol": 1e-6,
              "km": 1.,
-             "kf_t": 1.,
-             "kf_n": 1.,
-             "aperture": 1.,
-             "alpha": 1.
+             "kf_t": 1e7,
+             "kf_n": 1e3,
+             "aperture": 1e-2,
              }
 
     table_alpha = []
-    for k in np.arange(5):
-        alpha = 1./(10. ** k)
+    for k in np.arange(2, 7):
+        alpha = 10. ** k
 
         it = data.solve_(file_name, mesh_size, alpha, param)
 
@@ -64,18 +63,18 @@ def test_fracture_no():
     fracs = [1, 5, 10, 20, 40, 63]
 
     mesh_size = 600./32
-    alpha = 1000.
+    alpha = 1e5
 
     param = {"tol": 1e-6,
              "km": 1.,
-             "kf_t": 1.,
-             "kf_n": 1.,
-             "aperture": 1.,
+             "kf_t": 1e7,
+             "kf_n": 1e3,
+             "aperture": 0.01,
              }
 
     table_fracs = []
     for frac_no in fracs:
-        file_name = "network_sotra_" + str(frac_no) + ".csv"
+        file_name = "case_4_" + str(frac_no) + ".csv"
 
         it = data.solve_(file_name, mesh_size, alpha, param)
 
@@ -89,15 +88,14 @@ def test_fracture_no():
 
 def main():
     file_name = "network_sotra.csv"
-    mesh_size = 600./16
-    alpha = 1e4
+    mesh_size = 600./32
+    alpha = 1e6
 
     param = {"tol": 1e-6,
              "km": 1.,
-             "kf_t": 1.,
-             "kf_n": 1.,
-             "aperture": 1.,
-             "alpha": 1e4
+             "kf_t": 1e7,
+             "kf_n": 1e3,
+             "aperture": 1e-2,
              }
 
     data.solve_(file_name, mesh_size, alpha, param)
@@ -106,7 +104,7 @@ def main():
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    # main()
+    main()
     # test_alpha()
     # test_mesh_size()
-    test_fracture_no()
+    # test_fracture_no()
