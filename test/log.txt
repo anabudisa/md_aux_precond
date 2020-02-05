@@ -1,0 +1,24 @@
+2020-02-05 17:47:01 INFO     Generated a fracture set with 6 fractures
+2020-02-05 17:47:01 INFO     Minimum point coordinates x: 0.00, y: 0.00
+2020-02-05 17:47:01 INFO     Maximum point coordinates x: 1.00, y: 1.00
+2020-02-05 17:47:01 INFO     Domain specification :{'xmin': 0, 'xmax': 1, 'ymin': 0, 'ymax': 1}
+2020-02-05 17:47:01 DEBUG    Iteration 0, max difference0.0
+2020-02-05 17:47:01 INFO     Fracture snapping converged after 0 iterations
+2020-02-05 17:47:01 INFO     Maximum modification 0.0
+2020-02-05 17:47:01 INFO     Create 2d mesh
+2020-02-05 17:47:01 INFO     Remove edge crossings
+2020-02-05 17:47:01 INFO     Done. Elapsed time 0.010891199111938477
+2020-02-05 17:47:01 INFO     Determine mesh size
+2020-02-05 17:47:01 INFO     Done. Elapsed time 0.018201112747192383
+2020-02-05 17:47:01 INFO     Gmsh processed file successfully
+2020-02-05 17:47:01 INFO     Create grids of various dimensions
+2020-02-05 17:47:01 INFO     Grid creation completed. Elapsed time 0.04549717903137207
+2020-02-05 17:47:01 INFO     Created 1 2-d grids with 184 cells
+2020-02-05 17:47:01 INFO     Created 6 1-d grids with 28 cells
+2020-02-05 17:47:01 INFO     Created 9 0-d grids with 9 cells
+2020-02-05 17:47:01 INFO     Assemble in bucket
+2020-02-05 17:47:01 INFO     Done. Elapsed time 0.03379654884338379
+2020-02-05 17:47:01 INFO     Compute geometry
+2020-02-05 17:47:01 INFO     Done. Elapsed time 0.009357452392578125
+2020-02-05 17:47:01 INFO     Split fractures
+2020-02-05 17:47:01 INFO     Done. Elapsed time 0.12300300598144531

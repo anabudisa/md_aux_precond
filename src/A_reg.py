@@ -20,6 +20,7 @@ class A_reg(object):
         A = np.empty(shape=(self.gb.num_graph_nodes(), self.gb.num_graph_nodes()),
                      dtype=np.object)
 
+        # interior H1 matrices
         for g, d in self.gb:
             if g.dim == 0:
                 A[nn, nn] = self.local_stiff_matrix(g)
@@ -30,27 +31,30 @@ class A_reg(object):
                 nn = d["node_number"]
                 A[nn, nn] = sps.block_diag([local_matrix]*g.dim)
 
+        # boundary H1 matrices
         for e, de in self.gb.edges():
             # get lower and higher dimensional grids on this interface
             g_down, g_up = self.gb.nodes_of_edge(e)
             nn_g_up = self.gb.graph.node[g_up]["node_number"]
             mg = de["mortar_grid"]
 
-            for side in np.arange(mg.num_sides):
-                cells_per_side = mg.num_cells / mg.num_sides
+            for side in np.arange(mg.num_sides()):
+                cells_per_side = mg.num_cells / mg.num_sides()
                 local_slice = slice(side * cells_per_side, (side + 1) * cells_per_side)
                 
                 # find all lower-dim cells and higher-dim faces that match on
                 # this interface
                 cells, faces, data = sps.find(
-                    mg.slave_to_mortar_int()[local_slice, :].T * mg.master_to_mortar_int())
+                    mg.slave_to_mortar_int()[local_slice, :].T * mg.master_to_mortar_int()[local_slice, :])
 
                 # nodes of higher-dim grid
-                nodes_up = np.unique(g_up.face_nodes()[:, faces])
+                nodes_up, _, _ = sps.find(g_up.face_nodes[:, faces])
+                nodes_up = np.unique(nodes_up)
                 nodes_up_coord = g_up.nodes[:, nodes_up]
 
                 # nodes of lower-dim grid
-                nodes_down = np.unique(g_down.cell_nodes()[:, cells])
+                nodes_down, _, _ = sps.find(g_down.cell_nodes()[:, cells])
+                nodes_down = np.unique(nodes_down)
                 nodes_down_coord = g_down.nodes[:, nodes_down]
 
                 nodes_map = self.dof_matcher(nodes_down_coord, nodes_up_coord)
@@ -62,8 +66,12 @@ class A_reg(object):
                                     cf_up.indptr[faces[0] + 1]][0]
                 face_normal = g_up.face_normals[:, 0] * outward
 
+                # map normal to reference domain
+                R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
+                face_normal = np.dot(R, face_normal)
+
                 Tr = self.trace_op(g_up.dim, face_normal, nodes_map, nodes_up,
-                                nodes_down)
+                                nodes_down, g_up, g_down)
 
                 A_bdry = self.local_stiff_matrix(g_down) + \
                         self.local_mass_matrix(g_down)
@@ -282,12 +290,14 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
-    def trace_op(self, dim, normal, nodes_map, nodes_up, nodes_down):
+    def trace_op(self, dim, normal, nodes_map, nodes_up, nodes_down, g_up,
+                 g_down):
         I = nodes_down[nodes_map]
         J = nodes_up
         dataIJ = np.ones(nodes_up.size)
 
-        R = sps.csr_matrix(dataIJ, (I, J))
+        R = sps.csr_matrix((dataIJ, (I, J)), shape=(g_down.num_nodes,
+                                                  g_up.num_nodes))
 
         R_d = [R * normal[d] for d in range(dim)]
 
@@ -314,9 +324,12 @@ class A_reg(object):
 
         except:
             longlist = np.hstack((xy_1[:dim, :], xy_2[:dim, :]))
-            _, _, mapping = pp.utils.setmembership.unique_columns_tol(longlist)
+            _, _, mapping = setmembership.unique_columns_tol(longlist)
 
             mapping = mapping[xy_1.shape[1]:]
+
+        import pdb;
+        pdb.set_trace()
 
         assert np.all(np.sort(mapping) == np.arange(len(mapping)))
 
