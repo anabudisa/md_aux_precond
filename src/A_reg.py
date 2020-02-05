@@ -36,35 +36,39 @@ class A_reg(object):
             nn_g_up = self.gb.graph.node[g_up]["node_number"]
             mg = de["mortar_grid"]
 
-            # find all lower-dim cells and higher-dim faces that match on
-            # this interface
-            cells, faces, data = sps.find(
-                mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
+            for side in np.arange(mg.num_sides):
+                cells_per_side = mg.num_cells / mg.num_sides
+                local_slice = slice(side * cells_per_side, (side + 1) * cells_per_side)
+                
+                # find all lower-dim cells and higher-dim faces that match on
+                # this interface
+                cells, faces, data = sps.find(
+                    mg.slave_to_mortar_int()[local_slice, :].T * mg.master_to_mortar_int())
 
-            # nodes of higher-dim grid
-            nodes_up = np.unique(g_up.face_nodes()[:, faces])
-            nodes_up_coord = g_up.nodes[:, nodes_up]
+                # nodes of higher-dim grid
+                nodes_up = np.unique(g_up.face_nodes()[:, faces])
+                nodes_up_coord = g_up.nodes[:, nodes_up]
 
-            # nodes of lower-dim grid
-            nodes_down = np.unique(g_down.cell_nodes()[:, cells])
-            nodes_down_coord = g_down.nodes[:, nodes_down]
+                # nodes of lower-dim grid
+                nodes_down = np.unique(g_down.cell_nodes()[:, cells])
+                nodes_down_coord = g_down.nodes[:, nodes_down]
 
-            nodes_map = self.dof_matcher(nodes_down_coord, nodes_up_coord)
+                nodes_map = self.dof_matcher(nodes_down_coord, nodes_up_coord)
 
-            # find face normals of interface faces of higher-dim grid
-            cf_up = g_up.cell_faces.tocsr()
-            # outward or inward?
-            outward = cf_up.data[cf_up.indptr[faces[0]]:
-                                 cf_up.indptr[faces[0] + 1]][0]
-            face_normal = g_up.face_normals[:, 0] * outward
+                # find face normals of interface faces of higher-dim grid
+                cf_up = g_up.cell_faces.tocsr()
+                # outward or inward?
+                outward = cf_up.data[cf_up.indptr[faces[0]]:
+                                    cf_up.indptr[faces[0] + 1]][0]
+                face_normal = g_up.face_normals[:, 0] * outward
 
-            Tr = self.trace_op(g_up.dim, face_normal, nodes_map, nodes_up,
-                               nodes_down)
+                Tr = self.trace_op(g_up.dim, face_normal, nodes_map, nodes_up,
+                                nodes_down)
 
-            A_bdry = self.local_stiff_matrix(g_down) + \
-                     self.local_mass_matrix(g_down)
+                A_bdry = self.local_stiff_matrix(g_down) + \
+                        self.local_mass_matrix(g_down)
 
-            A[nn, nn] += Tr.T * A_bdry * Tr
+                A[nn, nn] += Tr.T * A_bdry * Tr
 
         return sps.bmat(A, format='csr')
 
