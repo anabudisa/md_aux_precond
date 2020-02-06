@@ -57,6 +57,23 @@ class A_reg(object):
                 nodes_down = np.unique(nodes_down)
                 nodes_down_coord = g_down.nodes[:, nodes_down]
 
+                # TODO: fix this bug below
+                """ 
+                The problem with matching nodes in this way is that the 
+                fracture grid is not cut into two separate grids when it is 
+                intersected with another fracture grid. Therefore, 
+                at intersections, we have duplicate nodes with same 
+                coordinates and one intersection grid in between.
+                The problem is that both of those nodes are in the same grid!
+                This goes in all dimensions, 3d->2d, 2d->1d and 1D->0d.
+                Going through sides of mortar grid, we still cannot avoid 
+                this double counting of nodes and matching coordinates won't 
+                give us the right mapping we need.
+                
+                See figure for easier understanding what's happening in the 
+                Geiger 2D case: 
+                https://www.dropbox.com/s/5rl7bbnfcbmdf83/20200206_165846.jpg?dl=0                
+                """
                 nodes_map = self.dof_matcher(nodes_down_coord, nodes_up_coord)
 
                 # find face normals of interface faces of higher-dim grid
@@ -328,8 +345,7 @@ class A_reg(object):
 
             mapping = mapping[xy_1.shape[1]:]
 
-        import pdb;
-        pdb.set_trace()
+        import pdb; pdb.set_trace()
 
         assert np.all(np.sort(mapping) == np.arange(len(mapping)))
 
