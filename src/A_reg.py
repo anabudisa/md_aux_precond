@@ -22,13 +22,13 @@ class A_reg(object):
 
         # interior H1 matrices
         for g, d in self.gb:
+            nn = d["node_number"]
             if g.dim == 0:
                 A[nn, nn] = self.local_stiff_matrix(g)
             else:
                 local_matrix = self.local_stiff_matrix(g) + \
                                self.local_mass_matrix(g)
 
-                nn = d["node_number"]
                 A[nn, nn] = sps.block_diag([local_matrix]*g.dim)
 
         # boundary H1 matrices
@@ -47,65 +47,84 @@ class A_reg(object):
                 cells, faces, data = sps.find(
                     mg.slave_to_mortar_int()[local_slice, :].T * mg.master_to_mortar_int()[local_slice, :])
 
-                # nodes of higher-dim grid
-                nodes_up, _, _ = sps.find(g_up.face_nodes[:, faces])
-                nodes_up = np.unique(nodes_up)
-                nodes_up_coord = g_up.nodes[:, nodes_up]
+                # restriction operator
+                size = g_up.dim * np.size(data)
+                I = np.empty(size, dtype=np.int)
+                J = np.empty(size, dtype=np.int)
+                dataIJ = np.zeros(size)
 
-                # nodes of lower-dim grid
-                nodes_down, _, _ = sps.find(g_down.cell_nodes()[:, cells])
-                nodes_down = np.unique(nodes_down)
-                nodes_down_coord = g_down.nodes[:, nodes_down]
+                count = 0
+                for i in np.arange(np.size(data)):
+                    face = faces[i]
+                    cell = cells[i]
 
-                # TODO: fix this bug below
-                """ 
-                The problem with matching nodes in this way is that the 
-                fracture grid is not cut into two separate grids when it is 
-                intersected with another fracture grid. Therefore, 
-                at intersections, we have duplicate nodes with same 
-                coordinates and one intersection grid in between.
-                The problem is that both of those nodes are in the same grid!
-                This goes in all dimensions, 3d->2d, 2d->1d and 1D->0d.
-                Going through sides of mortar grid, we still cannot avoid 
-                this double counting of nodes and matching coordinates won't 
-                give us the right mapping we need.
-                
-                See figure for easier understanding what's happening in the 
-                Geiger 2D case: 
-                https://www.dropbox.com/s/5rl7bbnfcbmdf83/20200206_165846.jpg?dl=0                
-                """
-                nodes_map = self.dof_matcher(nodes_down_coord, nodes_up_coord)
+                    # nodes of higher-dim grid
+                    nodes_up, _, _ = sps.find(g_up.face_nodes[:, face])
+                    nodes_up = np.unique(nodes_up)
+                    nodes_up_coord = g_up.nodes[:, nodes_up]
+
+                    # nodes of lower-dim grid
+                    nodes_down, _, _ = sps.find(g_down.cell_nodes()[:, cell])
+                    nodes_down = np.unique(nodes_down)
+                    nodes_down_coord = g_down.nodes[:, nodes_down]
+
+                    # how many nodes
+                    nodes_count = np.size(nodes_up)
+
+                    # nodes_down_coord[ind_match] = nodes_up_coord
+                    idx_match = self.match_coordinates(nodes_up_coord,
+                                                       nodes_down_coord)
+
+                    # update restriction matrix
+                    idx_track = slice(count, count + nodes_count)
+                    I[idx_track] = np.ravel(nodes_down[idx_match])
+                    J[idx_track] = np.ravel(nodes_up)
+                    dataIJ[idx_track] = np.ravel(np.full(nodes_count, True))
+
+                    count += nodes_count
+
+                # Restriction of nodes from higher dim grid to lower dim grid
+                Restriction = sps.csr_matrix((dataIJ, (I, J)), shape=(
+                    g_down.num_nodes, g_up.num_nodes))
 
                 # find face normals of interface faces of higher-dim grid
                 cf_up = g_up.cell_faces.tocsr()
                 # outward or inward?
                 outward = cf_up.data[cf_up.indptr[faces[0]]:
-                                    cf_up.indptr[faces[0] + 1]][0]
+                                     cf_up.indptr[faces[0] + 1]][0]
                 face_normal = g_up.face_normals[:, 0] * outward
+                face_normal /= np.linalg.norm(face_normal)
 
                 # map normal to reference domain
-                R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
+                if g_up.dim == self.gb.dim_max():
+                    R = np.identity(3)
+                elif g_up.dim == 2:
+                    R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
+                else:
+                    R = cg.project_line_matrix(g_up.nodes)
+
                 face_normal = np.dot(R, face_normal)
 
-                Tr = self.trace_op(g_up.dim, face_normal, nodes_map, nodes_up,
-                                nodes_down, g_up, g_down)
+                Tr = self.trace_op_div(g_up.dim, face_normal, Restriction)
 
                 A_bdry = self.local_stiff_matrix(g_down) + \
                         self.local_mass_matrix(g_down)
 
-                A[nn, nn] += Tr.T * A_bdry * Tr
+                A[nn_g_up, nn_g_up] += Tr.T * A_bdry * Tr
 
         return sps.bmat(A, format='csr')
 
     # ------------------------------------------------------------------------ #
 
+    # TODO: still missing traces of 2 dimensions down
     def A_reg_curl(self):
         # only 2D and 3D
         grids_23 = self.gb.get_grids(lambda g: g.dim >= 2)
         n_grids_23 = grids_23.size
         A = np.empty(shape=(n_grids_23, n_grids_23), dtype=np.object)
 
-        for g, d in self.gb:
+        for g in grids_23:
+            d = self.gb.graph.node[g]
             nn = d["node_number"]
             local_matrix = self.local_stiff_matrix(g) + \
                            self.local_mass_matrix(g)
@@ -114,41 +133,105 @@ class A_reg(object):
             else:
                 A[nn, nn] = local_matrix
 
+        # boundary H1 matrices
         for e, de in self.gb.edges():
             # get lower and higher dimensional grids on this interface
             g_down, g_up = self.gb.nodes_of_edge(e)
             nn_g_up = self.gb.graph.node[g_up]["node_number"]
             mg = de["mortar_grid"]
 
-            # find all lower-dim cells and higher-dim faces that match on
-            # this interface
-            cells, faces, data = sps.find(
-                mg.slave_to_mortar_int().T * mg.master_to_mortar_int())
+            # only 3d and 2d grids are considered
+            if g_up.dim >= 2:
+                for side in np.arange(mg.num_sides()):
+                    cells_per_side = mg.num_cells / mg.num_sides()
+                    local_slice = slice(side * cells_per_side,
+                                        (side + 1) * cells_per_side)
 
-            # nodes of higher-dim grid
-            nodes_up = np.unique(g_up.face_nodes()[:, faces])
-            nodes_up_coord = g_up.nodes[:, nodes_up]
+                    # find all lower-dim cells and higher-dim faces that
+                    # match on
+                    # this interface
+                    cells, faces, data = sps.find(
+                        mg.slave_to_mortar_int()[local_slice,
+                        :].T * mg.master_to_mortar_int()[local_slice, :])
 
-            # nodes of lower-dim grid
-            nodes_down = np.unique(g_down.cell_nodes()[:, cells])
-            nodes_down_coord = g_down.nodes[:, nodes_down]
+                    # restriction operator
+                    size = g_up.dim * np.size(data)
+                    I = np.empty(size, dtype=np.int)
+                    J = np.empty(size, dtype=np.int)
+                    dataIJ = np.zeros(size)
 
-            nodes_map = self.dof_matcher(nodes_down, nodes_up)
+                    count = 0
+                    for i in np.arange(np.size(data)):
+                        face = faces[i]
+                        cell = cells[i]
 
-            # find face normals of interface faces of higher-dim grid
-            cf_up = g_up.cell_faces.tocsr()
-            # outward or inward?
-            outward = cf_up.data[cf_up.indptr[faces[0]]:
-                                 cf_up.indptr[faces[0] + 1]][0]
-            face_normal = g_up.face_normals[:, 0] * outward
+                        # nodes of higher-dim grid
+                        nodes_up, _, _ = sps.find(g_up.face_nodes[:, face])
+                        nodes_up = np.unique(nodes_up)
+                        nodes_up_coord = g_up.nodes[:, nodes_up]
 
-            Tr = self.trace_op(g_up.dim, face_normal)
-            A_bdry = self.local_stiff_matrix(g_down) + \
-                     self.local_mass_matrix(g_down)
+                        # nodes of lower-dim grid
+                        nodes_down, _, _ = sps.find(
+                            g_down.cell_nodes()[:, cell])
+                        nodes_down = np.unique(nodes_down)
+                        nodes_down_coord = g_down.nodes[:, nodes_down]
 
-            A[nn, nn] += Tr.T * A_bdry * Tr
+                        # how many nodes
+                        nodes_count = np.size(nodes_up)
 
-        return sps.bmat(A, format='csr')
+                        # nodes_down_coord[ind_match] = nodes_up_coord
+                        idx_match = self.match_coordinates(nodes_up_coord,
+                                                           nodes_down_coord)
+
+                        # update restriction matrix
+                        idx_track = slice(count, count + nodes_count)
+                        I[idx_track] = np.ravel(nodes_down[idx_match])
+                        J[idx_track] = np.ravel(nodes_up)
+                        dataIJ[idx_track] = np.ravel(
+                            np.full(nodes_count, True))
+
+                        count += nodes_count
+
+                    # Restriction of nodes from higher dim grid to lower
+                    # dim grid
+                    Restriction = sps.csr_matrix((dataIJ, (I, J)), shape=(
+                        g_down.num_nodes, g_up.num_nodes))
+
+                    # find face normals of interface faces of higher-dim
+                    # grid
+                    cf_up = g_up.cell_faces.tocsr()
+                    # outward or inward?
+                    outward = cf_up.data[cf_up.indptr[faces[0]]:
+                                         cf_up.indptr[faces[0] + 1]][0]
+                    face_normal = g_up.face_normals[:, 0] * outward
+                    face_normal /= np.linalg.norm(face_normal)
+
+                    # map normal to reference domain
+                    if g_up.dim == self.gb.dim_max():
+                        R = np.identity(3)
+                    elif g_up.dim == 2:
+                        R = cg.project_plane_matrix(g_up.nodes,
+                                                    check_planar=False)
+                    else:
+                        R = cg.project_line_matrix(g_up.nodes)
+
+                    face_normal = np.dot(R, face_normal)
+
+                    # Get curl trace operator
+                    Tr = self.trace_op_curl(g_up.dim, face_normal, Restriction)
+
+                    # local boundary H1 matrix
+                    local_matrix = self.local_stiff_matrix(g_down) + \
+                             self.local_mass_matrix(g_down)
+
+                    if g_up.dim == 3:
+                        A_bdry = sps.block_diag([local_matrix] * 3)
+                    else:
+                        A_bdry = local_matrix
+
+                    A[nn_g_up, nn_g_up] += Tr.T * A_bdry * Tr
+
+            return sps.bmat(A, format='csr')
 
     # ------------------------------------------------------------------------ #
 
@@ -167,7 +250,7 @@ class A_reg(object):
 
         # If a 0-d grid is given then we return an identity matrix
         if g.dim == 0:
-            M = sps.csr_matrix((g.num_nodes, g.num_nodes))
+            M = sps.identity(1)
             return M
 
         # Map the domain to a reference geometry (i.e. equivalent to compute
@@ -229,7 +312,7 @@ class A_reg(object):
 
         # If a 0-d grid is given then we return an identity matrix
         if g.dim == 0:
-            M = sps.csr_matrix((g.num_nodes, g.num_nodes))
+            M = sps.identity(1)
             return M
 
         # Allocate the data to store matrix entries, that's the most efficient
@@ -307,46 +390,38 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
-    def trace_op(self, dim, normal, nodes_map, nodes_up, nodes_down, g_up,
-                 g_down):
-        I = nodes_down[nodes_map]
-        J = nodes_up
-        dataIJ = np.ones(nodes_up.size)
+    def trace_op_div(self, dim, normal, Restriction):
 
-        R = sps.csr_matrix((dataIJ, (I, J)), shape=(g_down.num_nodes,
-                                                  g_up.num_nodes))
-
-        R_d = [R * normal[d] for d in range(dim)]
+        R_d = [Restriction * normal[d] for d in range(dim)]
 
         return sps.hstack(R_d, format='csr')
 
     # ------------------------------------------------------------------------ #
 
+    def trace_op_curl(self, dim, normal, R):
+
+        if dim == 3:
+            R_d = [[None, R * normal[2], -R * normal[1]],
+                   [-R * normal[3], None, R * normal[0]],
+                   [R * normal[1], -R * normal[0], None]]
+            return sps.bmat(R_d, format='csr')
+        else:
+            return R
+
+    # ------------------------------------------------------------------------ #
+
     @staticmethod
-    def dof_matcher(xy_1, xy_2):
-        """
-        Returns the indices such that xy_1[mapping[i]] = xy_2[i]
-        """
+    def match_coordinates(a, b):
+        # TODO: check how slow this is (WB: Still the fastest I can think of)
+        # compare and match columns of a and b
+        # return: ind s.t. b[:, ind] = a
+        # Note: we assume that all columns will match
+        #       and a and b match in shape
+        ind = np.empty((b.shape[1],), dtype=int)
+        for i in np.arange(a.shape[1]):
+            for j in np.arange(b.shape[1]):
+                if np.linalg.norm(a[:, i] - b[:, j]) < 1e-12:
+                    ind[i] = j
+                    break
 
-        dim = np.min((xy_1.shape[0], xy_2.shape[0]))
-
-        try:
-            xy_dict = {}
-            for i, xy in enumerate(xy_1.T):
-                xy_dict[str(xy[:dim])] = i
-
-            mapping = np.zeros(xy_2.shape[1])
-            for i, xy in enumerate(xy_2.T):
-                mapping[i] = xy_dict[str(xy[:dim])]
-
-        except:
-            longlist = np.hstack((xy_1[:dim, :], xy_2[:dim, :]))
-            _, _, mapping = setmembership.unique_columns_tol(longlist)
-
-            mapping = mapping[xy_1.shape[1]:]
-
-        import pdb; pdb.set_trace()
-
-        assert np.all(np.sort(mapping) == np.arange(len(mapping)))
-
-        return mapping
+        return ind
