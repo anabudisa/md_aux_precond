@@ -9,6 +9,8 @@ from tabulate import tabulate
 import porepy as pp
 
 from Hcurl3D import Hcurl
+from A_reg import A_reg
+
 from logger import logger
 
 
@@ -41,6 +43,14 @@ class Solver(object):
         self.Pi_div_h = None
         # Projection operator nodes to edges dof
         self.Pi_curl_h = None
+        # mass part of H1 inner product for regularized div
+        self.A_reg_div_mass = None
+        # stiffness part of H1 inner product for regularized div
+        self.A_reg_div_stiff = None
+        # mass part of H1 inner product for regularized curl
+        self.A_reg_curl_mass = None
+        # stiffness part of H1 inner product for regularized curl
+        self.A_reg_curl_stiff = None
         # Sign fixing - cos for some reason mortar variable gives a negative
         # definite matrix
         self.signs = None
@@ -141,18 +151,48 @@ class Solver(object):
         ncol_pp = ctypes.c_int(App_size[1])
         nnz_pp = ctypes.c_int(self.A[1, 1].nnz)
 
-        # HX preconditioner
+        ##  HX preconditioner
+        # Div to H1 projection
         Pidiv_size = self.Pi_div_h.shape
         nrowp1_Pidiv = Pidiv_size[0] + 1
         nrow_Pidiv = ctypes.c_int(Pidiv_size[0])
         ncol_Pidiv = ctypes.c_int(Pidiv_size[1])
         nnz_Pidiv = ctypes.c_int(self.Pi_div_h.nnz)
 
+        # Curl operator
         Curl_size = self.Curl.shape
         nrowp1_Curl = Curl_size[0] + 1
         nrow_Curl = ctypes.c_int(Curl_size[0])
         ncol_Curl = ctypes.c_int(Curl_size[1])
         nnz_Curl = ctypes.c_int(self.Curl.nnz)
+
+        # H1 mass inner product for regular div
+        Ardivmass_size = self.A_reg_div_mass.shape
+        nrowp1_divmass = Ardivmass_size[0] + 1
+        nrow_divmass = ctypes.c_int(Ardivmass_size[0])
+        ncol_divmass = ctypes.c_int(Ardivmass_size[1])
+        nnz_divmass = ctypes.c_int(self.A_reg_div_mass.nnz)
+
+        # H1 stiffness inner product for regular div
+        Ardivstiff_size = self.A_reg_div_stiff.shape
+        nrowp1_divstiff = Ardivstiff_size[0] + 1
+        nrow_divstiff = ctypes.c_int(Ardivstiff_size[0])
+        ncol_divstiff = ctypes.c_int(Ardivstiff_size[1])
+        nnz_divstiff = ctypes.c_int(self.A_reg_div_stiff.nnz)
+
+        # H1 mass inner product for regular curl
+        Arcurlmass_size = self.A_reg_curl_mass.shape
+        nrowp1_curlmass = Arcurlmass_size[0] + 1
+        nrow_curlmass = ctypes.c_int(Arcurlmass_size[0])
+        ncol_curlmass = ctypes.c_int(Arcurlmass_size[1])
+        nnz_curlmass = ctypes.c_int(self.A_reg_curl_mass.nnz)
+
+        # H1 stiffness inner product for regular curl
+        Arcurlstiff_size = self.A_reg_curl_stiff.shape
+        nrowp1_curlstiff = Arcurlstiff_size[0] + 1
+        nrow_curlstiff = ctypes.c_int(Arcurlstiff_size[0])
+        ncol_curlstiff = ctypes.c_int(Arcurlstiff_size[1])
+        nnz_curlstiff = ctypes.c_int(self.A_reg_curl_stiff.nnz)
 
         # allocate solution
         nrow = Auu_size[0] + App_size[0]
@@ -168,6 +208,7 @@ class Solver(object):
             # 3D wrapper
             start_time = time.time()
 
+            # Curl to H1 projection
             Picurl_size = self.Pi_curl_h.shape
             nrowp1_Picurl = Picurl_size[0] + 1
             nrow_Picurl = ctypes.c_int(Picurl_size[0])
@@ -404,6 +445,17 @@ class Solver(object):
         #     if list_[0] not in ["Curl", "Pi div", "Pi curl", "Compute edges"]:
         #         cum_sum += float(list_[1])
         # print("Cum sum curl: ", cum_sum)
+
+        # set up H1 inner product operators for div and curl
+        start_time = time.time()
+        Areg = A_reg(self.gb)
+
+        self.A_reg_div_mass, self.A_reg_div_stiff = Areg.reg_div()
+        self.A_reg_curl_mass, self.A_reg_curl_stiff = Areg.reg_curl()
+
+        t = time.time() - start_time
+        self.cpu_time.append(["H1 inner products setup", str(t)])
+        logger.info("Elapsed time setup H1 inner products: " + str(t))
         logger.info("Done")
 
     # ------------------------------------------------------------------------ #

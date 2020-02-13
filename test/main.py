@@ -11,8 +11,8 @@ from A_reg import A_reg
 
 
 def main():
-    file_name = "network_geiger.csv"
-    mesh_size = 1./8
+    file_name = "network_geiger_3d.csv"
+    mesh_size = 1./32
     alpha = 1e0
 
     param = {"tol": 1e-6,
@@ -23,10 +23,11 @@ def main():
              "alpha": 1e0
              }
 
-    gb = data.make_mesh(file_name, mesh_size)
-    Areg = A_reg(gb)
-
-    A_reg_div = Areg.A_reg_div()
+    # gb = data.make_mesh3d(file_name, mesh_size)
+    # Areg = A_reg(gb)
+    data.solve_(file_name, mesh_size, alpha, param)
+    # A_reg_div = Areg.reg_div()
+    # A_reg_curl = Areg.reg_curl()
 
     return
 

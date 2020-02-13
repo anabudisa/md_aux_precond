@@ -2,11 +2,22 @@ import numpy as np
 import scipy.sparse as sps
 import time
 
-from porepy.utils import setmembership
 from porepy.utils import comp_geom as cg
 
 
 class A_reg(object):
+    """
+    Class of mixed-dimensional regular (H1) inner products for functions in
+    mixed-dimensional H(div) and H(curl). Using vector and scalar P1 elements.
+    Parameters
+    ----------
+    :param gb: graph
+        grid bucket as graph of grids
+    :param tol: scalar
+        set tolerance for matching floats
+    :param cpu_time: list
+        measuring CPU time for assembling inner product matrices
+    """
 
     def __init__(self, gb):
         # Grid bucket
@@ -16,20 +27,36 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
-    def A_reg_div(self):
-        A = np.empty(shape=(self.gb.num_graph_nodes(), self.gb.num_graph_nodes()),
-                     dtype=np.object)
+    def reg_div(self):
+        """
+        Assemble the H1 mass and stiffness matrix for the regularized
+        div functions by P1 elements.
+        --------
+        :return:
+        scipy.sparse.csr_matrix
+            of (num_grids, num_grids) blocks,
+            where every block is scipy.sparse.csr_matrix of local grid mass
+            matrices
+        scipy.sparse.csr_matrix
+            of (num_grids, num_grids) blocks,
+            where every block is scipy.sparse.csr_matrix of local grid stiffness
+            matrices
+        """
+
+        A_mass = np.empty(shape=(self.gb.num_graph_nodes(),
+                                 self.gb.num_graph_nodes()), dtype=np.object)
+        A_stiff = np.empty(shape=(self.gb.num_graph_nodes(),
+                                  self.gb.num_graph_nodes()), dtype=np.object)
 
         # interior H1 matrices
         for g, d in self.gb:
             nn = d["node_number"]
             if g.dim == 0:
-                A[nn, nn] = self.local_stiff_matrix(g)
+                A_mass[nn, nn] = self.local_mass_matrix(g)
+                A_stiff[nn, nn] = self.local_stiff_matrix(g)
             else:
-                local_matrix = self.local_stiff_matrix(g) + \
-                               self.local_mass_matrix(g)
-
-                A[nn, nn] = sps.block_diag([local_matrix]*g.dim)
+                A_mass[nn, nn] = sps.block_diag([self.local_mass_matrix(g)]*g.dim)
+                A_stiff[nn, nn] = sps.block_diag([self.local_stiff_matrix(g)]*g.dim)
 
         # boundary H1 matrices
         for e, de in self.gb.edges():
@@ -107,31 +134,46 @@ class A_reg(object):
 
                 Tr = self.trace_op_div(g_up.dim, face_normal, Restriction)
 
-                A_bdry = self.local_stiff_matrix(g_down) + \
-                        self.local_mass_matrix(g_down)
+                A_mass[nn_g_up, nn_g_up] += Tr.T * self.local_mass_matrix(g_down) * Tr
+                A_stiff[nn_g_up, nn_g_up] += Tr.T * self.local_stiff_matrix(g_down) * Tr
 
-                A[nn_g_up, nn_g_up] += Tr.T * A_bdry * Tr
-
-        return sps.bmat(A, format='csr')
+        return sps.bmat(A_mass, format='csr'), sps.bmat(A_stiff, format='csr')
 
     # ------------------------------------------------------------------------ #
 
     # TODO: still missing traces of 2 dimensions down
-    def A_reg_curl(self):
+    def reg_curl(self):
+        """
+        Assemble the H1 mass and stiffness matrix for the regularized curl
+        functions by P1 elements.
+        --------
+        :return:
+        scipy.sparse.csr_matrix
+            of (num_grids_of_dim_2&3, num_grids_of_dim_2&3) blocks,
+            where every block is scipy.sparse.csr_matrix of local grid
+            mass matrices
+        scipy.sparse.csr_matrix
+            of (num_grids_of_dim_2&3, num_grids_of_dim_2&3) blocks,
+            where every block is scipy.sparse.csr_matrix of local grid
+            stiffness matrices
+        """
+
         # only 2D and 3D
         grids_23 = self.gb.get_grids(lambda g: g.dim >= 2)
         n_grids_23 = grids_23.size
-        A = np.empty(shape=(n_grids_23, n_grids_23), dtype=np.object)
+        A_mass = np.empty(shape=(n_grids_23, n_grids_23), dtype=np.object)
+        A_stiff = np.empty(shape=(n_grids_23, n_grids_23), dtype=np.object)
 
         for g in grids_23:
             d = self.gb.graph.node[g]
             nn = d["node_number"]
-            local_matrix = self.local_stiff_matrix(g) + \
-                           self.local_mass_matrix(g)
+
             if g.dim == 3:
-                A[nn, nn] = sps.block_diag([local_matrix] * 3)
+                A_mass[nn, nn] = sps.block_diag([self.local_mass_matrix(g)] * 3)
+                A_stiff[nn, nn] = sps.block_diag([self.local_stiff_matrix(g)] * 3)
             else:
-                A[nn, nn] = local_matrix
+                A_mass[nn, nn] = self.local_mass_matrix(g)
+                A_stiff[nn, nn] = self.local_stiff_matrix(g)
 
         # boundary H1 matrices
         for e, de in self.gb.edges():
@@ -210,8 +252,7 @@ class A_reg(object):
                     if g_up.dim == self.gb.dim_max():
                         R = np.identity(3)
                     elif g_up.dim == 2:
-                        R = cg.project_plane_matrix(g_up.nodes,
-                                                    check_planar=False)
+                        R = cg.project_plane_matrix(g_up.nodes, check_planar=False)
                     else:
                         R = cg.project_line_matrix(g_up.nodes)
 
@@ -221,22 +262,22 @@ class A_reg(object):
                     Tr = self.trace_op_curl(g_up.dim, face_normal, Restriction)
 
                     # local boundary H1 matrix
-                    local_matrix = self.local_stiff_matrix(g_down) + \
-                             self.local_mass_matrix(g_down)
-
                     if g_up.dim == 3:
-                        A_bdry = sps.block_diag([local_matrix] * 3)
+                        A_bdry_mass = sps.block_diag([self.local_mass_matrix(g_down)] * 3)
+                        A_bdry_stiff = sps.block_diag([self.local_stiff_matrix(g_down)] * 3)
                     else:
-                        A_bdry = local_matrix
+                        A_bdry_mass = self.local_mass_matrix(g_down)
+                        A_bdry_stiff = self.local_stiff_matrix(g_down)
 
-                    A[nn_g_up, nn_g_up] += Tr.T * A_bdry * Tr
+                    A_mass[nn_g_up, nn_g_up] += Tr.T * A_bdry_mass * Tr
+                    A_stiff[nn_g_up, nn_g_up] += Tr.T * A_bdry_stiff * Tr
 
-            return sps.bmat(A, format='csr')
+        return sps.bmat(A_mass, format='csr'), sps.bmat(A_stiff, format='csr')
 
     # ------------------------------------------------------------------------ #
 
     def local_stiff_matrix(self, g):
-        """ Return the matrix for a H1 stiffness matrix using P1 elements.
+        """ Return the H1 stiffness matrix local to a grid using P1 elements.
 
         Parameters
         ----------
@@ -298,7 +339,7 @@ class A_reg(object):
     # ------------------------------------------------------------------------ #
 
     def local_mass_matrix(self, g):
-        """ Return the matrix for a H1 mass matrix using P1 elements.
+        """ Return the H1 mass matrix local to a grid using P1 elements.
 
         Parameters
         ----------
@@ -354,11 +395,16 @@ class A_reg(object):
     # ------------------------------------------------------------------------ #
 
     def stiffH1(self, c_volume, coord, dim):
-        """ Compute the local stiffness H1 matrix using the P1 approach.
+        """ Compute the H1 stiffness matrix local to a cell using the P1
+        approach.
         Parameters
         ----------
         c_volume : scalar
             Cell volume.
+        coord : ndarray (dim, num_nodes_of_cell)
+            Coordinates of cell nodes
+        dim : scalar
+            Grid dimension
         Return
         ------
         out: ndarray (num_faces_of_cell, num_faces_of_cell)
@@ -373,11 +419,13 @@ class A_reg(object):
     # ------------------------------------------------------------------------ #
 
     def massH1(self, c_volume, dim):
-        """ Compute the local stiffness H1 matrix using the P1 approach.
+        """ Compute the H1 mass matrix local to a cell using the P1 approach.
         Parameters
         ----------
         c_volume : scalar
             Cell volume.
+        dim : scalar
+            Grid dimension
         Return
         ------
         out: ndarray (num_faces_of_cell, num_faces_of_cell)
@@ -390,19 +438,49 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
-    def trace_op_div(self, dim, normal, Restriction):
+    def trace_op_div(self, dim, normal, R):
+        """
+        Assemble the trace operator mapping normal trace of current grid to
+        interface (lower-dim) grids.
+        ----------
+        :param dim: scalar
+            Grid dimension.
+        :param normal: ndarray (3, 1)
+            Unit outward normal on grid boundary.
+        :param R: ndarray (g_down.num_nodes, g_up.num_nodes)
+            Restriction to lower-dim interface grid (already mapped to
+            reference domain).
+        :return:
+        scipy.sparse.csr_matrix (g_down.num_nodes, dim * g_up.num_nodes)
+            Trace operator.
+        """
 
-        R_d = [Restriction * normal[d] for d in range(dim)]
+        R_d = [R * normal[d] for d in range(dim)]
 
         return sps.hstack(R_d, format='csr')
 
     # ------------------------------------------------------------------------ #
 
     def trace_op_curl(self, dim, normal, R):
+        """
+        Assemble the trace operator mapping "cross" trace of current grid to
+        interface (lower-dim) grids.
+        ----------
+        :param dim: scalar
+            Grid dimension.
+        :param normal: ndarray (3, 1)
+            Unit outward normal on grid boundary.
+        :param R: ndarray (g_down.num_nodes, g_up.num_nodes)
+            Restriction to lower-dim interface grid (already mapped to
+            reference domain).
+        :return:
+        scipy.sparse.csr_matrix (g_down.num_nodes, dim * g_up.num_nodes)
+            Trace operator.
+        """
 
         if dim == 3:
             R_d = [[None, R * normal[2], -R * normal[1]],
-                   [-R * normal[3], None, R * normal[0]],
+                   [-R * normal[2], None, R * normal[0]],
                    [R * normal[1], -R * normal[0], None]]
             return sps.bmat(R_d, format='csr')
         else:
