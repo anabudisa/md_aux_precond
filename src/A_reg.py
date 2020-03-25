@@ -205,7 +205,7 @@ class A_reg(object):
                     cell = cells[i]
 
                     # nodes of higher-dim grid
-                    nodes_up = g_up.cell_nodes()[:, cell].tocoo().row
+                    nodes_up = g_up.face_nodes[:, face].tocoo().row
                     nodes_up = np.unique(nodes_up)
                     nodes_up_coord = g_up.nodes[:, nodes_up]
 
@@ -214,7 +214,6 @@ class A_reg(object):
                     nodes_down = np.unique(nodes_down)
                     nodes_down_coord = g_down.nodes[:, nodes_down]
 
-                    import pdb; pdb.set_trace()
                     # how many nodes
                     nodes_count = np.size(nodes_up)
 
@@ -272,13 +271,18 @@ class A_reg(object):
         gridbucket.
 
         """
+        start_time = time.time()
+
         for g, d in self.gb:
             nn = d["node_number"]
             self.mass_matrices[nn] = self.local_mass_matrix(g)
             self.stiff_matrices[nn] = self.local_stiff_matrix(g)
 
-    # ------------------------------------------------------------------------ #
+        t = time.time() - start_time
+        self.cpu_time.append(["Set local matrices", str(t)])
 
+    # ------------------------------------------------------------------------ #
+    # TODO: merge local stiff and mass matrices (takes too much time)
     def local_stiff_matrix(self, g):
         """ Return the H1 stiffness matrix local to a grid using P1 elements.
 

@@ -12,7 +12,7 @@ from A_reg import A_reg
 
 def main():
     file_name = "network_geiger_3d.csv"
-    mesh_size = 1./8
+    mesh_size = 1./16
     alpha = 1e0
 
     param = {"tol": 1e-6,

@@ -1,49 +1,51 @@
-2020-03-25 14:38:05 INFO     Find intersection between fratures
-2020-03-25 14:38:05 INFO     Found 57 intersections. Elapsed time: 0.07308
-2020-03-25 14:38:05 INFO     Split intersections
-2020-03-25 14:38:05 INFO     Compile list of points and edges
-2020-03-25 14:38:05 INFO     Points and edges done. Elapsed time 0.00262
-2020-03-25 14:38:05 INFO     Uniquify points and edges, starting with 174 points, 117
+2020-03-25 15:11:13 INFO     Find intersection between fratures
+2020-03-25 15:11:13 INFO     Found 57 intersections. Elapsed time: 0.06994
+2020-03-25 15:11:13 INFO     Split intersections
+2020-03-25 15:11:13 INFO     Compile list of points and edges
+2020-03-25 15:11:13 INFO     Points and edges done. Elapsed time 0.00202
+2020-03-25 15:11:13 INFO     Uniquify points and edges, starting with 174 points, 117
                     edges
-2020-03-25 14:38:05 INFO     Uniquify complete. 62 points, 57 edges. Elapsed time
-                    0.05268
-2020-03-25 14:38:05 INFO     Remove edge intersections
-2020-03-25 14:38:06 INFO     Done with intersection removal. Elapsed time 0.32232
-2020-03-25 14:38:06 INFO     Uniquify points and edges, starting with 65 points, 138
+2020-03-25 15:11:13 INFO     Uniquify complete. 62 points, 57 edges. Elapsed time
+                    0.06015
+2020-03-25 15:11:13 INFO     Remove edge intersections
+2020-03-25 15:11:14 INFO     Done with intersection removal. Elapsed time 0.30872
+2020-03-25 15:11:14 INFO     Uniquify points and edges, starting with 65 points, 138
                     edges
-2020-03-25 14:38:06 INFO     Uniquify complete. 65 points, 138 edges. Elapsed time
-                    0.06467
-2020-03-25 14:38:06 INFO     Finished fracture splitting after 0.51352 seconds
-2020-03-25 14:38:06 INFO     Minimal distance between points encountered is 0.125
-2020-03-25 14:38:06 INFO     Gmsh completed with status 0
-2020-03-25 14:38:06 INFO     Grid creation completed. Elapsed time 0.24241328239440918
-2020-03-25 14:38:06 INFO     Created 1 3-d grids with 3782 cells
-2020-03-25 14:38:06 INFO     Created 9 2-d grids with 792 cells
-2020-03-25 14:38:06 INFO     Created 69 1-d grids with 90 cells
-2020-03-25 14:38:06 INFO     Created 27 0-d grids with 27 cells
-2020-03-25 14:38:06 INFO     Assemble in bucket
-2020-03-25 14:38:07 INFO     Done. Elapsed time 0.8577189445495605
-2020-03-25 14:38:07 INFO     Compute geometry
-2020-03-25 14:38:07 INFO     Done. Elapsed time 0.1089181900024414
-2020-03-25 14:38:07 INFO     Split fractures
-2020-03-25 14:38:09 INFO     Done. Elapsed time 1.801356554031372
-2020-03-25 14:38:10 INFO     Set problem data
-2020-03-25 14:38:10 INFO     Done
-2020-03-25 14:38:10 INFO     Assemble the flow problem
-2020-03-25 14:38:22 INFO     Elapsed time assemble flow problem: 11.2957284450531
-2020-03-25 14:38:22 INFO     Done
-2020-03-25 14:38:22 INFO     Permute dof
-2020-03-25 14:38:22 INFO     Elapsed time permutation setup: 0.010588645935058594
-2020-03-25 14:38:22 INFO     Done
-2020-03-25 14:38:22 INFO     Set up saddle point system
-2020-03-25 14:38:22 INFO     Matrix 	 Shape
-2020-03-25 14:38:22 INFO     A00 	(12481, 12481)
-2020-03-25 14:38:22 INFO     A01 	(12481, 4691)
-2020-03-25 14:38:22 INFO     A10 	(4691, 12481)
-2020-03-25 14:38:22 INFO     A11 	(4691, 4691)
-2020-03-25 14:38:22 INFO     Elapsed time saddle point system setup: 0.020928144454956055
-2020-03-25 14:38:22 INFO     Done
-2020-03-25 14:38:22 INFO     Total number of dof: 17172
-2020-03-25 14:38:22 INFO     Flux number of dof: 12481
-2020-03-25 14:38:22 INFO     Get auxiliary operators for preconditioners
-2020-03-25 14:38:26 INFO     Elapsed time setup auxiliary operators: 4.217214822769165
+2020-03-25 15:11:14 INFO     Uniquify complete. 65 points, 138 edges. Elapsed time
+                    0.07088
+2020-03-25 15:11:14 INFO     Finished fracture splitting after 0.50455 seconds
+2020-03-25 15:11:14 INFO     Minimal distance between points encountered is 0.125
+2020-03-25 15:11:15 INFO     Gmsh completed with status 0
+2020-03-25 15:11:16 INFO     Grid creation completed. Elapsed time 0.43010616302490234
+2020-03-25 15:11:16 INFO     Created 1 3-d grids with 23269 cells
+2020-03-25 15:11:16 INFO     Created 9 2-d grids with 2928 cells
+2020-03-25 15:11:16 INFO     Created 69 1-d grids with 180 cells
+2020-03-25 15:11:16 INFO     Created 27 0-d grids with 27 cells
+2020-03-25 15:11:16 INFO     Assemble in bucket
+2020-03-25 15:11:17 INFO     Done. Elapsed time 1.4167332649230957
+2020-03-25 15:11:17 INFO     Compute geometry
+2020-03-25 15:11:18 INFO     Done. Elapsed time 0.2831721305847168
+2020-03-25 15:11:18 INFO     Split fractures
+2020-03-25 15:11:23 INFO     Done. Elapsed time 5.563302993774414
+2020-03-25 15:11:24 INFO     Set problem data
+2020-03-25 15:11:24 INFO     Done
+2020-03-25 15:11:24 INFO     Assemble the flow problem
+2020-03-25 15:12:00 INFO     Elapsed time assemble flow problem: 35.734968423843384
+2020-03-25 15:12:00 INFO     Done
+2020-03-25 15:12:00 INFO     Permute dof
+2020-03-25 15:12:00 INFO     Elapsed time permutation setup: 0.017849206924438477
+2020-03-25 15:12:00 INFO     Done
+2020-03-25 15:12:00 INFO     Set up saddle point system
+2020-03-25 15:12:00 INFO     Matrix 	 Shape
+2020-03-25 15:12:00 INFO     A00 	(63327, 63327)
+2020-03-25 15:12:00 INFO     A01 	(63327, 26404)
+2020-03-25 15:12:00 INFO     A10 	(26404, 63327)
+2020-03-25 15:12:00 INFO     A11 	(26404, 26404)
+2020-03-25 15:12:00 INFO     Elapsed time saddle point system setup: 0.10189247131347656
+2020-03-25 15:12:00 INFO     Done
+2020-03-25 15:12:00 INFO     Total number of dof: 89731
+2020-03-25 15:12:00 INFO     Flux number of dof: 63327
+2020-03-25 15:12:00 INFO     Get auxiliary operators for preconditioners
+2020-03-25 15:12:11 INFO     Elapsed time setup auxiliary operators: 10.712708711624146
+2020-03-25 15:12:34 INFO     Elapsed time setup H1 inner products: 23.698128938674927
+2020-03-25 15:12:34 INFO     Done
