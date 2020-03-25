@@ -439,7 +439,7 @@ class Solver(object):
         t = time.time() - start_time
         self.cpu_time.append(["Aux operators setup", str(t)])
         logger.info("Elapsed time setup auxiliary operators: " + str(t))
-        # print(tabulate(hcurl.cpu_time, headers=["hcurl process", "time"]))
+        print(tabulate(hcurl.cpu_time, headers=["hcurl process", "time"]))
         # cum_sum = 0
         # for list_ in hcurl.cpu_time:
         #     if list_[0] not in ["Curl", "Pi div", "Pi curl", "Compute edges"]:
@@ -455,6 +455,7 @@ class Solver(object):
 
         t = time.time() - start_time
         self.cpu_time.append(["H1 inner products setup", str(t)])
+        print(tabulate(Areg.cpu_time, headers=["Areg process", "time"]))
         logger.info("Elapsed time setup H1 inner products: " + str(t))
         logger.info("Done")
 
