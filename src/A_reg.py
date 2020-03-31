@@ -162,7 +162,7 @@ class A_reg(object):
         return sps.bmat(A_mass, format='csr'), sps.bmat(A_stiff, format='csr')
 
     # ------------------------------------------------------------------------ #
-    # @profile
+
     def set_traces(self):
         """
         Set restriction operators from nodes of higher dimension grid to
@@ -277,12 +277,14 @@ class A_reg(object):
 
         for g, d in self.gb:
             nn = d["node_number"]
-            self.stiff_matrices[nn], self.mass_matrices[nn] = self.local_stiff_and_mass(g)
+            self.stiff_matrices[nn], self.mass_matrices[nn] \
+                = self.local_stiff_and_mass(g)
 
         t = time.time() - start_time
         self.cpu_time.append(["Set local matrices", str(t)])
 
     # ------------------------------------------------------------------------ #
+
     def local_stiff_and_mass(self, g):
         """ Return the H1 stiffness matrix local to a grid using P1 elements.
         Parameters
@@ -298,8 +300,9 @@ class A_reg(object):
 
         # If a 0-d grid is given then we return an identity matrix
         if g.dim == 0:
+            A = sps.identity(1)
             M = sps.identity(1)
-            return M
+            return A, M
 
         # Map the domain to a reference geometry (i.e. equivalent to compute
         # surface coordinates in 1d and 2d)
@@ -351,6 +354,7 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
+    @profile
     def stiffH1(self, c_volume, coord, dim):
         """ Compute the H1 stiffness matrix local to a cell using the P1
         approach.
@@ -375,6 +379,7 @@ class A_reg(object):
 
     # ------------------------------------------------------------------------ #
 
+    @profile
     def massH1(self, c_volume, dim):
         """ Compute the H1 mass matrix local to a cell using the P1 approach.
         Parameters
