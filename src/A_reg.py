@@ -210,7 +210,8 @@ class A_reg(object):
                     nodes_up_coord = g_up.nodes[:, nodes_up]
 
                     # nodes of lower-dim grid
-                    nodes_down = g_down.cell_nodes()[:, cell].tocoo().row
+                    cell_nodes = g_down.face_nodes * np.abs(g_down.cell_faces[:, cell])
+                    nodes_down = cell_nodes.tocoo().row
                     nodes_down = np.unique(nodes_down)
                     nodes_down_coord = g_down.nodes[:, nodes_down]
 
