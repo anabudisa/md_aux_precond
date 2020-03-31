@@ -373,7 +373,8 @@ class A_reg(object):
         """
 
         Q = np.hstack((np.ones((dim + 1, 1)), coord.T))
-        dphi = np.linalg.inv(Q)[1:, :]
+        rhs = np.vstack((np.zeros((1, dim)), np.eye(dim)))
+        dphi = np.linalg.solve(Q.T, rhs).T
 
         return c_volume * np.dot(dphi.T, dphi)
 
