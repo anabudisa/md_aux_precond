@@ -181,8 +181,6 @@ class A_reg(object):
             mg = de["mortar_grid"]
             nn_e = de["edge_number"]
 
-            cell_nodes = g_down.cell_nodes()
-
             for side in np.arange(mg.num_sides()):
                 cells_per_side = mg.num_cells / mg.num_sides()
                 local_slice = slice(side * cells_per_side,
@@ -207,13 +205,14 @@ class A_reg(object):
                     cell = cells[i]
 
                     # nodes of higher-dim grid
-                    loc = slice(g_up.face_nodes.indptr[face], g_up.face_nodes.indptr[face + 1])
-                    nodes_up = g_up.face_nodes.indices[loc]
+                    nodes_up = g_up.face_nodes[:, face].tocoo().row
+                    nodes_up = np.unique(nodes_up)
                     nodes_up_coord = g_up.nodes[:, nodes_up]
 
                     # nodes of lower-dim grid
-                    loc = slice(cell_nodes.indptr[cell], cell_nodes.indptr[cell + 1])
-                    nodes_down = cell_nodes.indices[loc]
+                    cell_nodes = g_down.face_nodes * np.abs(g_down.cell_faces[:, cell])
+                    nodes_down = cell_nodes.tocoo().row
+                    nodes_down = np.unique(nodes_down)
                     nodes_down_coord = g_down.nodes[:, nodes_down]
 
                     # how many nodes
