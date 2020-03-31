@@ -276,25 +276,23 @@ class A_reg(object):
 
         for g, d in self.gb:
             nn = d["node_number"]
-            self.mass_matrices[nn] = self.local_mass_matrix(g)
-            self.stiff_matrices[nn] = self.local_stiff_matrix(g)
+            self.stiff_matrices[nn], self.mass_matrices[nn] = self.local_stiff_and_mass(g)
 
         t = time.time() - start_time
         self.cpu_time.append(["Set local matrices", str(t)])
 
     # ------------------------------------------------------------------------ #
-    # TODO: merge local stiff and mass matrices (takes too much time)
-    def local_stiff_matrix(self, g):
+    def local_stiff_and_mass(self, g):
         """ Return the H1 stiffness matrix local to a grid using P1 elements.
-
         Parameters
         ----------
         g: grid, or a subclass, with geometry fields computed.
-
         Returns
         ------
         matrix: sparse csr (g.num_nodes, g.num_nodes)
-            Matrix obtained from the discretization.
+            Stiffness matrix obtained from the discretization.
+        matrix: sparse csr (g.num_nodes, g.num_nodes)
+            Mass matrix obtained from the discretization.
         """
 
         # If a 0-d grid is given then we return an identity matrix
@@ -311,78 +309,26 @@ class A_reg(object):
         size = np.power(g.dim + 1, 2) * g.num_cells
         I = np.empty(size, dtype=np.int)
         J = np.empty(size, dtype=np.int)
-        dataIJ = np.empty(size)
+        data_stiff = np.empty(size)
+        data_mass = np.empty(size)
         idx = 0
 
         cell_nodes = g.cell_nodes()
-        nodes, cells, _ = sps.find(cell_nodes)
 
         for c in np.arange(g.num_cells):
             # For the current cell retrieve its nodes
             loc = slice(cell_nodes.indptr[c], cell_nodes.indptr[c + 1])
 
-            nodes_loc = nodes[loc]
+            nodes_loc = cell_nodes.indices[loc]
             coord_loc = node_coords[:, nodes_loc]
 
             # Compute the stiff-H1 local matrix
-            A = self.stiffH1(
+            A_local = self.stiffH1(
                 g.cell_volumes[c],
                 coord_loc,
                 g.dim,
             )
-
-            # Save values for stiff-H1 local matrix in the global structure
-            cols = np.tile(nodes_loc, (nodes_loc.size, 1))
-            loc_idx = slice(idx, idx + cols.size)
-            I[loc_idx] = cols.T.ravel()
-            J[loc_idx] = cols.ravel()
-            dataIJ[loc_idx] = A.ravel()
-            idx += cols.size
-
-        # Construct the global matrices
-        M = sps.csr_matrix((dataIJ, (I, J)))
-
-        return M
-
-    # ------------------------------------------------------------------------ #
-
-    def local_mass_matrix(self, g):
-        """ Return the H1 mass matrix local to a grid using P1 elements.
-
-        Parameters
-        ----------
-        g: grid, or a subclass, with geometry fields computed.
-
-        Returns
-        ------
-        matrix: sparse csr (g.num_nodes, g.num_nodes)
-            Matrix obtained from the discretization.
-        """
-
-        # If a 0-d grid is given then we return an identity matrix
-        if g.dim == 0:
-            M = sps.identity(1)
-            return M
-
-        # Allocate the data to store matrix entries, that's the most efficient
-        # way to create a sparse matrix.
-        size = np.power(g.dim + 1, 2) * g.num_cells
-        I = np.empty(size, dtype=np.int)
-        J = np.empty(size, dtype=np.int)
-        dataIJ = np.empty(size)
-        idx = 0
-
-        cell_nodes = g.cell_nodes()
-        nodes, cells, _ = sps.find(cell_nodes)
-
-        for c in np.arange(g.num_cells):
-            # For the current cell retrieve its nodes
-            loc = slice(cell_nodes.indptr[c], cell_nodes.indptr[c + 1])
-
-            nodes_loc = nodes[loc]
-
-            # Compute the stiff-H1 local matrix
-            A = self.massH1(
+            M_local = self.massH1(
                 g.cell_volumes[c],
                 g.dim,
             )
@@ -392,13 +338,15 @@ class A_reg(object):
             loc_idx = slice(idx, idx + cols.size)
             I[loc_idx] = cols.T.ravel()
             J[loc_idx] = cols.ravel()
-            dataIJ[loc_idx] = A.ravel()
+            data_stiff[loc_idx] = A_local.ravel()
+            data_mass[loc_idx] = M_local.ravel()
             idx += cols.size
 
         # Construct the global matrices
-        M = sps.csr_matrix((dataIJ, (I, J)))
+        A = sps.csr_matrix((data_stiff, (I, J)))
+        M = sps.csr_matrix((data_mass, (I, J)))
 
-        return M
+        return A, M
 
     # ------------------------------------------------------------------------ #
 
