@@ -176,10 +176,10 @@ class A_reg(object):
         for e, de in self.gb.edges():
             # get lower and higher dimensional grids on this interface
             g_down, g_up = self.gb.nodes_of_edge(e)
-            nn_g_up = self.gb.graph.node[g_up]["node_number"]
-            nn_g_down = self.gb.graph.node[g_down]["node_number"]
             mg = de["mortar_grid"]
             nn_e = de["edge_number"]
+
+            cell_nodes = g_down.cell_nodes()
 
             for side in np.arange(mg.num_sides()):
                 cells_per_side = mg.num_cells / mg.num_sides()
@@ -205,14 +205,15 @@ class A_reg(object):
                     cell = cells[i]
 
                     # nodes of higher-dim grid
-                    nodes_up = g_up.face_nodes[:, face].tocoo().row
-                    nodes_up = np.unique(nodes_up)
+                    loc = slice(
+                        g_up.face_nodes.indptr[face], g_up.face_nodes.indptr[face + 1])
+                    nodes_up = g_up.face_nodes.indices[loc]
                     nodes_up_coord = g_up.nodes[:, nodes_up]
 
                     # nodes of lower-dim grid
-                    cell_nodes = g_down.face_nodes * np.abs(g_down.cell_faces[:, cell])
-                    nodes_down = cell_nodes.tocoo().row
-                    nodes_down = np.unique(nodes_down)
+                    loc = slice(
+                        cell_nodes.indptr[cell], cell_nodes.indptr[cell + 1])
+                    nodes_down = cell_nodes.indices[loc]
                     nodes_down_coord = g_down.nodes[:, nodes_down]
 
                     # how many nodes
